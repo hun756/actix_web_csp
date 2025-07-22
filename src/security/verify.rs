@@ -1,6 +1,6 @@
+use crate::core::policy::CspPolicy;
+use crate::core::source::Source;
 use crate::error::CspError;
-use crate::policy::CspPolicy;
-use crate::source::Source;
 use rustc_hash::FxHashSet;
 use std::collections::HashMap;
 use url::Url;
@@ -143,7 +143,8 @@ impl PolicyVerifier {
 
         for source in directive.sources() {
             if let Source::Hash { algorithm, value } = source {
-                let calculated = crate::hash::HashGenerator::generate(*algorithm, content);
+                let calculated =
+                    crate::security::hash::HashGenerator::generate(*algorithm, content);
                 if calculated == value.as_ref() {
                     return Ok(true);
                 }
@@ -283,7 +284,8 @@ impl PolicyVerifier {
 
             for source in directive.sources() {
                 if let Source::Hash { algorithm, value } = source {
-                    let calculated = crate::hash::HashGenerator::generate(*algorithm, content);
+                    let calculated =
+                        crate::security::hash::HashGenerator::generate(*algorithm, content);
                     if calculated == value.as_ref() {
                         return Ok(true);
                     }
@@ -332,7 +334,8 @@ impl PolicyVerifier {
 
             for source in directive.sources() {
                 if let Source::Hash { algorithm, value } = source {
-                    let calculated = crate::hash::HashGenerator::generate(*algorithm, content);
+                    let calculated =
+                        crate::security::hash::HashGenerator::generate(*algorithm, content);
                     if calculated == value.as_ref() {
                         return Ok(true);
                     }

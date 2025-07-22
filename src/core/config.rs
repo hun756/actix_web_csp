@@ -1,9 +1,9 @@
 use crate::constants::DEFAULT_POLICY_CACHE_ENTRIES;
-use crate::nonce::NonceGenerator;
-use crate::perf::PerformanceMetrics;
-use crate::policy::CspPolicy;
-use crate::stats::CspStats;
-use crate::DirectiveSpec;
+use crate::core::directives::DirectiveSpec;
+use crate::core::policy::CspPolicy;
+use crate::monitoring::perf::PerformanceMetrics;
+use crate::monitoring::stats::CspStats;
+use crate::security::nonce::NonceGenerator;
 use dashmap::DashMap;
 use lru::LruCache;
 use parking_lot::RwLock;
@@ -61,7 +61,7 @@ impl CspConfig {
             let mut policy_guard = self.policy.write();
             f(&mut policy_guard);
         }
-        
+
         if !self.update_listeners.is_empty() {
             for listener in self.update_listeners.iter() {
                 let mut policy = self.policy.write();
@@ -88,12 +88,15 @@ impl CspConfig {
     }
 
     pub fn get_or_generate_request_nonce(&self, request_id: &str) -> Option<String> {
-        if !self.nonce_per_request.load(std::sync::atomic::Ordering::Relaxed) {
+        if !self
+            .nonce_per_request
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
             return None;
         }
 
         let generator = self.nonce_generator.as_ref()?;
-        
+
         Some(
             self.per_request_nonces
                 .entry(request_id.to_string())
@@ -161,15 +164,15 @@ impl CspConfig {
         {
             let mut policy = self.policy.write();
             if !policy.get_directive("default-src").is_some() {
-                use crate::directives::DefaultSrc;
-                use crate::source::Source;
+                use crate::core::directives::DefaultSrc;
+                use crate::core::source::Source;
                 let directive = DefaultSrc::new().add_source(Source::Self_).build();
                 policy.add_directive(directive);
             }
 
             if !policy.get_directive("object-src").is_some() {
-                use crate::directives::ObjectSrc;
-                use crate::source::Source;
+                use crate::core::directives::ObjectSrc;
+                use crate::core::source::Source;
                 let directive = ObjectSrc::new().add_source(Source::None).build();
                 policy.add_directive(directive);
             }

@@ -1,6 +1,6 @@
 use crate::constants::{HASH_PREFIX_SHA256, HASH_PREFIX_SHA384, HASH_PREFIX_SHA512};
+use crate::core::source::Source;
 use crate::error::CspError;
-use crate::source::Source;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use ring::digest::{self, Context, SHA256, SHA384, SHA512};
 use std::fmt;

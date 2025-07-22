@@ -1,6 +1,6 @@
 use crate::constants;
+use crate::core::source::Source;
 use crate::error::CspError;
-use crate::source::Source;
 use crate::utils::BufferWriter;
 use bytes::BytesMut;
 use rustc_hash::FxHashSet;

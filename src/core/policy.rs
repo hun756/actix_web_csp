@@ -2,9 +2,9 @@ use crate::constants::{
     DEFAULT_BUFFER_CAPACITY, DEFAULT_CACHE_DURATION_SECS, HEADER_CSP, HEADER_CSP_REPORT_ONLY,
     REPORT_TO, REPORT_URI, SEMICOLON_SPACE,
 };
-use crate::directives::{Directive, DirectiveSpec, Sandbox};
+use crate::core::directives::{Directive, DirectiveSpec, Sandbox};
+use crate::core::source::Source;
 use crate::error::CspError;
-use crate::source::Source;
 use crate::utils::{BufferWriter, BytesCache, CachedValue};
 use actix_web::http::header::{HeaderName, HeaderValue};
 use bytes::BytesMut;
@@ -285,63 +285,63 @@ impl CspPolicyBuilder {
     }
 
     pub fn default_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::DefaultSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::DefaultSrc::new().add_sources(sources))
     }
 
     pub fn script_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::ScriptSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::ScriptSrc::new().add_sources(sources))
     }
 
     pub fn style_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::StyleSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::StyleSrc::new().add_sources(sources))
     }
 
     pub fn img_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::ImgSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::ImgSrc::new().add_sources(sources))
     }
 
     pub fn connect_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::ConnectSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::ConnectSrc::new().add_sources(sources))
     }
 
     pub fn font_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::FontSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::FontSrc::new().add_sources(sources))
     }
 
     pub fn object_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::ObjectSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::ObjectSrc::new().add_sources(sources))
     }
 
     pub fn media_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::MediaSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::MediaSrc::new().add_sources(sources))
     }
 
     pub fn frame_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::FrameSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::FrameSrc::new().add_sources(sources))
     }
 
     pub fn worker_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::WorkerSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::WorkerSrc::new().add_sources(sources))
     }
 
     pub fn manifest_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::ManifestSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::ManifestSrc::new().add_sources(sources))
     }
 
     pub fn child_src(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::ChildSrc::new().add_sources(sources))
+        self.add_directive(crate::core::directives::ChildSrc::new().add_sources(sources))
     }
 
     pub fn frame_ancestors(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::FrameAncestors::new().add_sources(sources))
+        self.add_directive(crate::core::directives::FrameAncestors::new().add_sources(sources))
     }
 
     pub fn base_uri(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::BaseUri::new().add_sources(sources))
+        self.add_directive(crate::core::directives::BaseUri::new().add_sources(sources))
     }
 
     pub fn form_action(self, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.add_directive(crate::directives::FormAction::new().add_sources(sources))
+        self.add_directive(crate::core::directives::FormAction::new().add_sources(sources))
     }
 
     pub fn sandbox(self, sandbox_builder: Sandbox) -> Self {

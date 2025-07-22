@@ -1,34 +1,18 @@
-mod config;
-mod constants;
-mod directives;
-mod error;
-mod hash;
-mod middleware;
-mod nonce;
-mod perf;
-mod policy;
-mod report;
-mod source;
-mod stats;
-mod utils;
-mod verify;
-
-pub use config::{CspConfig, CspConfigBuilder};
-pub use directives::*;
-pub use error::CspError;
-pub use hash::{HashAlgorithm, HashGenerator};
-pub use middleware::{
-    configure_csp, configure_csp_with_reporting, csp_middleware, csp_middleware_with_nonce,
-    csp_middleware_with_request_nonce, CspExtensions, CspMiddleware, CspReportingMiddleware,
+use actix_web_csp::{
+    configure_csp, CspConfig, CspConfigBuilder, CspExtensions, CspMiddleware, CspPolicy,
+    CspPolicyBuilder, HashAlgorithm, HashGenerator, NonceGenerator, PolicyVerifier, Source,
 };
-pub use nonce::{NonceGenerator, RequestNonce};
-pub use perf::{AdaptiveCache, PerformanceMetrics, PerformanceTimer};
-pub use policy::{CspPolicy, CspPolicyBuilder};
-pub use report::CspViolationReport;
-pub use source::Source;
-pub use stats::CspStats;
-pub use verify::PolicyVerifier;
 
-pub fn main() {
-    println!("Hi");
+fn main() {
+    println!("Actix Web CSP Middleware Example");
+
+    // Create a simple CSP policy
+    let policy = CspPolicyBuilder::new()
+        .default_src([Source::Self_])
+        .script_src([Source::Self_, Source::UnsafeInline])
+        .style_src([Source::Self_, Source::UnsafeInline])
+        .img_src([Source::Self_, Source::Scheme("data".into())])
+        .build_unchecked();
+
+    println!("Created CSP policy");
 }

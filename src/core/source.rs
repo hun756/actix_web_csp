@@ -3,7 +3,7 @@ use crate::constants::{
     SUFFIX_QUOTE, UNSAFE_EVAL_SOURCE, UNSAFE_HASHES_SOURCE, UNSAFE_INLINE_SOURCE,
     WASM_UNSAFE_EVAL_SOURCE,
 };
-use crate::hash::HashAlgorithm;
+use crate::security::hash::HashAlgorithm;
 use crate::utils::BufferWriter;
 use bytes::BytesMut;
 use std::{
