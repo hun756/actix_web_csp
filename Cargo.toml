@@ -1,0 +1,86 @@
+[package]
+name = "actix_web_csp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Actix dependencies
+actix-web = "4.3.1"
+actix-http = "3.3.1"
+actix-service = "2.0.2"
+
+# Asynchronous utilities
+futures = "0.3.28"
+
+# Memory and performance optimization
+bytes = "1.4.0"
+smallvec = { version = "1.10.0", features = ["const_generics", "union"] }
+rustc-hash = "1.1.0"
+indexmap = "2.0.0"
+dashmap = "5.4.0"
+lru = "0.11.0"
+parking_lot = { version = "0.12.1", features = ["send_guard"] }
+
+# Cryptography and security
+ring = "0.16.20"
+getrandom = "0.2.10"
+base64 = "0.21.2"
+
+# Error handling
+thiserror = "1.0.40"
+
+# Serialization/Deserialization
+serde = { version = "1.0.163", features = ["derive"] }
+serde_json = "1.0.96"
+
+# URL handling
+url = { version = "2.3.1" }
+
+# UUID generation
+uuid = { version = "1.3.3", features = ["v4", "fast-rng"] }
+
+log = "0.4.14"
+
+[dev-dependencies]
+actix-rt = "2.8.0"
+criterion = "0.5.1"
+mockall = "0.11.4"
+tokio = { version = "1.28.2", features = ["full"] }
+test-case = "3.1.0"
+
+[features]
+default = ["stats", "reporting"]
+stats = []
+reporting = []
+nonce-cache = []
+verify = []
+extended-validation = []
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+strip = true
+
+[profile.bench]
+lto = true
+codegen-units = 1
+opt-level = 3
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[[bench]]
+name = "csp_benchmark"
+harness = false
+
+[package.metadata.playground]
+features = [
+    "stats",
+    "reporting",
+    "verify",
+    "nonce-cache",
+    "extended-validation",
+]
