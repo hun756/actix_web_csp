@@ -175,10 +175,12 @@ impl<T> Drop for PooledItem<T> {
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
+#[allow(dead_code)]
 pub struct FastStringBuilder {
     buffer: BytesMut,
 }
 
+#[allow(dead_code)]
 impl FastStringBuilder {
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
@@ -241,6 +243,7 @@ impl FastStringBuilder {
 
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
+    #[allow(dead_code)]
     unsafe fn simd_copy_aligned(src: &[u8], dst: &mut [u8]) {
         if src.len() >= 32 && dst.len() >= 32 {
             let chunks = src.len() / 32;
@@ -262,6 +265,7 @@ impl FastStringBuilder {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn fast_bulk_copy(&mut self, sources: &[&[u8]]) {
         let total_len: usize = sources.iter().map(|s| s.len()).sum();
         self.reserve(total_len);
@@ -306,6 +310,7 @@ pub struct CompactString {
     data: SmallVec<[u8; 24]>,
 }
 
+#[allow(dead_code)]
 impl CompactString {
     #[inline]
     pub fn new() -> Self {

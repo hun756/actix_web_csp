@@ -207,6 +207,7 @@ impl PolicyVerifier {
     }
 
     #[inline]
+    #[allow(dead_code)]
     fn match_host(&self, url: &Url, host: &str) -> bool {
         let url_host = match url.host_str() {
             Some(h) => h,
