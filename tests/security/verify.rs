@@ -1,5 +1,5 @@
 use actix_web_csp::{
-    core::{CspPolicy, CspPolicyBuilder, Source},
+    core::{CspPolicyBuilder, Source},
     security::{HashAlgorithm, HashGenerator, PolicyVerifier},
 };
 use std::borrow::Cow;
