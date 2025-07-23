@@ -115,3 +115,22 @@ impl TryFrom<&serde_json::Value> for CspViolationReport {
         serde_json::from_value(value.clone())
     }
 }
+
+impl Default for CspViolationReport {
+    fn default() -> Self {
+        Self {
+            document_uri: String::new(),
+            referrer: String::new(),
+            blocked_uri: String::new(),
+            violated_directive: String::new(),
+            effective_directive: String::new(),
+            original_policy: String::new(),
+            disposition: String::new(),
+            source_file: None,
+            line_number: None,
+            column_number: None,
+            status_code: None,
+            script_sample: None,
+        }
+    }
+}

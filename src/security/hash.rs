@@ -4,6 +4,7 @@ use crate::error::CspError;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use ring::digest::{self, Context, SHA256, SHA384, SHA512};
 use std::fmt;
+use std::borrow::Cow;
 
 use smallvec::SmallVec;
 
@@ -290,5 +291,10 @@ impl HashGenerator {
         });
 
         results
+    }
+
+    #[inline]
+    pub fn generate_hash(&self, content: &str) -> Result<String, CspError> {
+        Ok(Self::generate(HashAlgorithm::Sha256, content.as_bytes()))
     }
 }
