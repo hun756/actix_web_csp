@@ -347,4 +347,42 @@ impl PolicyVerifier {
             Ok(true)
         }
     }
+
+    pub fn blocks_inline_scripts(&self) -> Result<bool, CspError> {
+        let directive = self
+            .policy
+            .get_directive("script-src")
+            .or_else(|| self.policy.get_directive("default-src"));
+
+        if let Some(directive) = directive {
+            Ok(!directive.sources().iter().any(|s| s.is_unsafe_inline()))
+        } else {
+            Ok(true)
+        }
+    }
+
+    pub fn allows_unsafe_eval(&self) -> bool {
+        let directive = self
+            .policy
+            .get_directive("script-src")
+            .or_else(|| self.policy.get_directive("default-src"));
+
+        if let Some(directive) = directive {
+            directive.sources().iter().any(|s| s.is_unsafe_eval())
+        } else {
+            false
+        }
+    }
+
+    pub fn has_report_uri(&self) -> bool {
+        self.policy.report_uri().is_some()
+    }
+
+    pub fn has_report_to(&self) -> bool {
+        self.policy.report_to().is_some()
+    }
+
+    pub fn has_directive(&self, directive_name: &str) -> bool {
+        self.policy.get_directive(directive_name).is_some()
+    }
 }
