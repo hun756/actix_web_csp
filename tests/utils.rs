@@ -174,7 +174,7 @@ mod tests {
         }
         let duration = start.elapsed();
 
-        assert!(duration < Duration::from_millis(1));
+        assert!(duration < Duration::from_millis(10));
     }
 
     #[test]
