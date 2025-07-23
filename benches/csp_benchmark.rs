@@ -1,8 +1,9 @@
 use actix_web_csp::{
-    CspConfig, CspPolicyBuilder, HashAlgorithm, HashGenerator, NonceGenerator, PolicyVerifier,
-    Source,
+    core::CspConfig, security::HashAlgorithm, security::HashGenerator, security::NonceGenerator,
+    security::PolicyVerifier, CspPolicyBuilder, Source,
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::borrow::Cow;
 
 fn benchmark_policy_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("policy_creation");
@@ -26,22 +27,28 @@ fn benchmark_policy_creation(c: &mut Criterion) {
                     .default_src([Source::Self_])
                     .script_src([
                         Source::Self_,
-                        Source::Host("cdn.example.com".into()),
-                        Source::Host("*.googleapis.com".into()),
-                        Source::Nonce("abc123".into()),
+                        Source::Host(Cow::Borrowed("cdn.example.com")),
+                        Source::Host(Cow::Borrowed("*.googleapis.com")),
+                        Source::Nonce(Cow::Borrowed("abc123")),
                     ])
                     .style_src([
                         Source::Self_,
                         Source::UnsafeInline,
-                        Source::Host("fonts.googleapis.com".into()),
+                        Source::Host(Cow::Borrowed("fonts.googleapis.com")),
                     ])
                     .img_src([
                         Source::Self_,
-                        Source::Scheme("data".into()),
-                        Source::Host("*.example.com".into()),
+                        Source::Scheme(Cow::Borrowed("data")),
+                        Source::Host(Cow::Borrowed("*.example.com")),
                     ])
-                    .connect_src([Source::Self_, Source::Host("api.example.com".into())])
-                    .font_src([Source::Self_, Source::Host("fonts.gstatic.com".into())])
+                    .connect_src([
+                        Source::Self_,
+                        Source::Host(Cow::Borrowed("api.example.com")),
+                    ])
+                    .font_src([
+                        Source::Self_,
+                        Source::Host(Cow::Borrowed("fonts.gstatic.com")),
+                    ])
                     .object_src([Source::None])
                     .media_src([Source::Self_])
                     .frame_src([Source::None])
@@ -66,22 +73,28 @@ fn benchmark_header_generation(c: &mut Criterion) {
         .default_src([Source::Self_])
         .script_src([
             Source::Self_,
-            Source::Host("cdn.example.com".into()),
-            Source::Host("*.googleapis.com".into()),
-            Source::Nonce("abc123def456ghi789".into()),
+            Source::Host(Cow::Borrowed("cdn.example.com")),
+            Source::Host(Cow::Borrowed("*.googleapis.com")),
+            Source::Nonce(Cow::Borrowed("abc123def456ghi789")),
         ])
         .style_src([
             Source::Self_,
             Source::UnsafeInline,
-            Source::Host("fonts.googleapis.com".into()),
+            Source::Host(Cow::Borrowed("fonts.googleapis.com")),
         ])
         .img_src([
             Source::Self_,
-            Source::Scheme("data".into()),
-            Source::Host("*.example.com".into()),
+            Source::Scheme(Cow::Borrowed("data")),
+            Source::Host(Cow::Borrowed("*.example.com")),
         ])
-        .connect_src([Source::Self_, Source::Host("api.example.com".into())])
-        .font_src([Source::Self_, Source::Host("fonts.gstatic.com".into())])
+        .connect_src([
+            Source::Self_,
+            Source::Host(Cow::Borrowed("api.example.com")),
+        ])
+        .font_src([
+            Source::Self_,
+            Source::Host(Cow::Borrowed("fonts.gstatic.com")),
+        ])
         .object_src([Source::None])
         .media_src([Source::Self_])
         .frame_src([Source::None])
@@ -200,8 +213,8 @@ fn benchmark_policy_verification(c: &mut Criterion) {
         .default_src([Source::Self_])
         .script_src([
             Source::Self_,
-            Source::Host("cdn.example.com".into()),
-            Source::Host("*.googleapis.com".into()),
+            Source::Host(Cow::Borrowed("cdn.example.com")),
+            Source::Host(Cow::Borrowed("*.googleapis.com")),
         ])
         .build_unchecked();
 
