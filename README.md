@@ -397,3 +397,29 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 ```
+
+### API Server with CORS
+
+```rust
+use actix_cors::Cors;
+
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::None])
+    .connect_src([
+        Source::Self_,
+        Source::Host("api.frontend.com".into())
+    ])
+    .report_uri("/api/csp-violations")
+    .build_unchecked();
+
+let app = App::new()
+    .wrap(
+        Cors::default()
+            .allowed_origin("https://frontend.com")
+            .allowed_methods(vec!["GET", "POST"])
+            .max_age(3600)
+    )
+    .wrap(csp_middleware(policy))
+    .route("/api/data", web::get().to(api_handler));
+```
+
