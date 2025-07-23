@@ -1,5 +1,5 @@
 use actix_web::{test, web, App, HttpResponse, Result};
-use actix_web_csp::{csp_middleware, CspPolicyBuilder, CspViolationReport, Source};
+use actix_web_csp::{csp_middleware, CspPolicyBuilder, Source};
 use std::borrow::Cow;
 
 async fn test_page_with_nonce() -> Result<HttpResponse> {
@@ -40,10 +40,6 @@ async fn test_api_endpoint() -> Result<HttpResponse> {
         "status": "success",
         "data": "API is working"
     })))
-}
-
-fn csp_violation_handler(report: CspViolationReport) {
-    println!("CSP Violation: {:?}", report);
 }
 
 #[cfg(test)]

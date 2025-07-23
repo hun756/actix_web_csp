@@ -1,5 +1,4 @@
 use actix_web_csp::utils::intern_string;
-use bytes::BytesMut;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -179,7 +178,6 @@ mod tests {
 
     #[test]
     fn test_intern_string_thread_safety() {
-        use std::sync::Arc;
         use std::thread;
 
         let handles: Vec<_> = (0..10)

@@ -1,5 +1,5 @@
 use actix_web_csp::{
-    core::{CspConfig, CspConfigBuilder, CspPolicy, CspPolicyBuilder, Source},
+    core::{CspConfigBuilder, CspPolicy, CspPolicyBuilder, Source},
     middleware::{csp_middleware, CspMiddleware},
 };
 
