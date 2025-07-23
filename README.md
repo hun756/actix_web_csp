@@ -456,4 +456,4 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 ---
 
-**Note**: This middleware is production-ready and actively maintained. For security issues, please email security@example.com.
+**Note**: This middleware is production-ready and actively maintained. For security issues, please email ekemenms@gmail.com.
