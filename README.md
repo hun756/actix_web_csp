@@ -194,3 +194,84 @@ let app = App::new()
     .wrap(csp_middleware_with_nonce(policy, 32)) // 32-byte nonce
     .route("/secure", web::get().to(secure_page));
 ```
+
+### Violation Reporting
+
+Handle CSP violations in real-time:
+
+```rust
+use actix_web_csp::{csp_with_reporting, CspViolationReport};
+
+fn handle_violation(report: CspViolationReport) {
+    println!("🚨 CSP Violation Detected:");
+    println!("  Document: {}", report.document_uri);
+    println!("  Violated: {}", report.violated_directive);
+    println!("  Blocked: {}", report.blocked_uri);
+    
+    // Log to security monitoring system
+    // security_logger::log_csp_violation(&report);
+}
+
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::Self_])
+    .script_src([Source::Self_])
+    .report_uri("/csp-report")
+    .build_unchecked();
+
+let (middleware, configurator) = csp_with_reporting(policy, handle_violation);
+
+let app = App::new()
+    .wrap(middleware)
+    .configure(configurator) // Adds /csp-report endpoint
+    .route("/", web::get().to(index));
+```
+
+### Performance Monitoring
+
+Track CSP performance metrics:
+
+```rust
+use actix_web_csp::{CspStats, csp_middleware_with_stats};
+
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::Self_])
+    .build_unchecked();
+
+let (middleware, stats) = csp_middleware_with_stats(policy);
+
+// Monitor performance
+tokio::spawn(async move {
+    loop {
+        tokio::time::sleep(Duration::from_secs(60)).await;
+        println!("CSP Stats: {} requests processed", stats.total_requests());
+        println!("Average response time: {}μs", stats.avg_response_time_micros());
+    }
+});
+
+let app = App::new()
+    .wrap(middleware)
+    .route("/", web::get().to(index));
+```
+
+## Security Testing
+
+The library includes a comprehensive security testing tool:
+
+```rust
+use actix_web_csp::{CspSecurityTester, CspPolicyBuilder, Source};
+
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::Self_])
+    .script_src([Source::Self_])
+    .build_unchecked();
+
+let mut tester = CspSecurityTester::new(policy);
+let results = tester.run_comprehensive_test();
+
+// Results show:
+// ✅ XSS Protection - 4/4 XSS payloads blocked
+// ✅ Inline Script Protection - Inline scripts blocked
+// ✅ External Script Protection - 4/4 malicious domains blocked
+// ✅ Overall Assessment: 🟢 Your CSP configuration looks secure!
+```
+
