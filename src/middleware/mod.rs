@@ -8,5 +8,5 @@ pub use reporting::{CspReportingMiddleware, CspReportingMiddlewareService};
 
 pub use csp::{
     configure_csp, configure_csp_with_reporting, csp_middleware, csp_middleware_with_nonce,
-    csp_middleware_with_request_nonce,
+    csp_middleware_with_request_nonce, csp_with_reporting,
 };
