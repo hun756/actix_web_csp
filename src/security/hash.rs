@@ -3,10 +3,8 @@ use crate::core::source::Source;
 use crate::error::CspError;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use ring::digest::{self, Context, SHA256, SHA384, SHA512};
-use std::fmt;
-use std::borrow::Cow;
-
 use smallvec::SmallVec;
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum HashAlgorithm {

