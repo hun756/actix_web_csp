@@ -1,6 +1,6 @@
 # Actix Web CSP
 
-A comprehensive, high-performance Content Security Policy (CSP) middleware for Actix Web applications. Built with security-first principles and optimized for production workloads.
+A high-performance Content Security Policy (CSP) middleware for Actix Web applications. Built with security-first principles and optimized for production workloads.
 
 ## Features
 
@@ -75,6 +75,7 @@ let policy = CspPolicyBuilder::new()
     .form_action([Source::Self_])
     .build_unchecked();
 ```
+
 ### Development-Friendly Policy
 
 For development environments:
@@ -207,7 +208,7 @@ fn handle_violation(report: CspViolationReport) {
     println!("  Document: {}", report.document_uri);
     println!("  Violated: {}", report.violated_directive);
     println!("  Blocked: {}", report.blocked_uri);
-    
+
     // Log to security monitoring system
     // security_logger::log_csp_violation(&report);
 }
@@ -275,3 +276,124 @@ let results = tester.run_comprehensive_test();
 // ✅ Overall Assessment: 🟢 Your CSP configuration looks secure!
 ```
 
+Run the security tester:
+
+```bash
+cargo run --example csp_security_tester
+```
+
+## Policy Builder API
+
+The `CspPolicyBuilder` provides a fluent interface for policy construction:
+
+```rust
+let policy = CspPolicyBuilder::new()
+    // Content sources
+    .default_src([Source::Self_])
+    .script_src([Source::Self_, Source::Host("cdn.example.com".into())])
+    .style_src([Source::Self_, Source::UnsafeInline])
+    .img_src([Source::Self_, Source::Scheme("data".into())])
+    .connect_src([Source::Self_, Source::Scheme("https".into())])
+    .font_src([Source::Self_, Source::Host("fonts.gstatic.com".into())])
+    .object_src([Source::None])
+    .media_src([Source::Self_])
+    .frame_src([Source::None])
+
+    // Navigation sources
+    .base_uri([Source::Self_])
+    .form_action([Source::Self_])
+
+    // Reporting
+    .report_uri("/csp-violations")
+    .report_to("csp-endpoint")
+
+    // Build policy (validates configuration)
+    .build()
+    .expect("Invalid CSP policy");
+```
+
+### Source Types
+
+```rust
+use actix_web_csp::Source;
+
+// Special keywords
+Source::Self_           // 'self'
+Source::None           // 'none'
+Source::UnsafeInline   // 'unsafe-inline'
+Source::UnsafeEval     // 'unsafe-eval'
+Source::StrictDynamic  // 'strict-dynamic'
+
+// Schemes
+Source::Scheme("https".into())  // https:
+Source::Scheme("data".into())   // data:
+
+// Hosts
+Source::Host("example.com".into())        // example.com
+Source::Host("*.example.com".into())      // *.example.com
+Source::Host("example.com:443".into())    // example.com:443
+
+// Nonces (auto-generated)
+Source::Nonce("random-value".into())      // 'nonce-random-value'
+
+// Hashes (auto-calculated)
+Source::Hash {
+    algorithm: HashAlgorithm::Sha256,
+    value: "base64-hash".into()
+}  // 'sha256-base64-hash'
+```
+
+## Real-World Examples
+
+### Production Web Application
+
+```rust
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let policy = CspPolicyBuilder::new()
+        .default_src([Source::Self_])
+        .script_src([
+            Source::Self_,
+            Source::Host("cdnjs.cloudflare.com".into()),
+            Source::Host("cdn.jsdelivr.net".into())
+        ])
+        .style_src([
+            Source::Self_,
+            Source::Host("fonts.googleapis.com".into()),
+            Source::Host("cdnjs.cloudflare.com".into())
+        ])
+        .img_src([
+            Source::Self_,
+            Source::Scheme("https".into()),
+            Source::Scheme("data".into())
+        ])
+        .connect_src([
+            Source::Self_,
+            Source::Host("api.example.com".into()),
+            Source::Scheme("https".into())
+        ])
+        .font_src([
+            Source::Self_,
+            Source::Host("fonts.gstatic.com".into()),
+            Source::Scheme("data".into())
+        ])
+        .frame_ancestors([Source::None])
+        .report_uri("/security/csp-violations")
+        .build_unchecked();
+
+    HttpServer::new(move || {
+        App::new()
+            .wrap(Logger::default())
+            .wrap(csp_middleware(policy.clone()))
+            .service(
+                web::scope("/api")
+                    .route("/users", web::get().to(get_users))
+                    .route("/products", web::get().to(get_products))
+            )
+            .service(Files::new("/", "./static").index_file("index.html"))
+    })
+    .bind("0.0.0.0:8080")?
+    .run()
+    .await
+}
+```
