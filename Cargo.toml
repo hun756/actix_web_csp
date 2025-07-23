@@ -2,6 +2,24 @@
 name = "actix_web_csp"
 version = "0.1.0"
 edition = "2021"
+authors = ["Mehmet Ekemen <ekemenms@gmail.com>"]
+description = "High-performance Content Security Policy middleware for Actix Web"
+license = "MIT"
+repository = "https://github.com/hun756/actix_web_csp"
+documentation = "https://docs.rs/actix_web_csp"
+homepage = "https://github.com/hun756/actix_web_csp"
+readme = "README.md"
+keywords = ["actix-web", "csp", "security", "middleware", "web"]
+categories = ["web-programming", "web-programming::http-server"]
+exclude = ["target/", "*.log", ".git/", "tests/browser_test.html"]
+
+[lib]
+name = "actix_web_csp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "actix_web_csp"
+path = "src/main.rs"
 
 [dependencies]
 # Actix dependencies
