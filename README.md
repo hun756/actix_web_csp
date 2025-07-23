@@ -53,3 +53,60 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 ```
+
+## Configuration Examples
+
+### Strict Security Policy
+
+For applications requiring maximum security:
+
+```rust
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::None])
+    .script_src([Source::Self_])
+    .style_src([Source::Self_])
+    .img_src([Source::Self_])
+    .connect_src([Source::Self_])
+    .font_src([Source::Self_])
+    .object_src([Source::None])
+    .media_src([Source::None])
+    .frame_src([Source::None])
+    .base_uri([Source::Self_])
+    .form_action([Source::Self_])
+    .build_unchecked();
+```
+### Development-Friendly Policy
+
+For development environments:
+
+```rust
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::Self_])
+    .script_src([
+        Source::Self_,
+        Source::Host("localhost:3000".into()),
+        Source::Host("cdn.jsdelivr.net".into())
+    ])
+    .style_src([
+        Source::Self_,
+        Source::UnsafeInline, // Only for development!
+        Source::Host("fonts.googleapis.com".into())
+    ])
+    .img_src([
+        Source::Self_,
+        Source::Scheme("data".into()),
+        Source::Scheme("https".into())
+    ])
+    .connect_src([
+        Source::Self_,
+        Source::Scheme("https".into()),
+        Source::Scheme("ws".into()) // WebSocket support
+    ])
+    .font_src([
+        Source::Self_,
+        Source::Scheme("data".into()),
+        Source::Host("fonts.gstatic.com".into())
+    ])
+    .report_uri("/csp-violations")
+    .build_unchecked();
+```
