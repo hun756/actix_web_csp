@@ -438,14 +438,6 @@ Run benchmarks:
 cargo bench
 ```
 
-## Best Practices
-
-1. **Start strict, then relax**: Begin with `default-src 'none'` and add sources as needed
-2. **Avoid 'unsafe-inline'**: Use nonces or hashes instead
-3. **Monitor violations**: Set up proper violation reporting
-4. **Test thoroughly**: Use the included security testing tools
-5. **Regular audits**: Periodically review and tighten your policy
-
 ## License
 
 Licensed under the MIT License. See [LICENSE](LICENSE) for details.
