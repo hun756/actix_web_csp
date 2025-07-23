@@ -110,3 +110,87 @@ let policy = CspPolicyBuilder::new()
     .report_uri("/csp-violations")
     .build_unchecked();
 ```
+
+### E-commerce Application
+
+Secure configuration for online stores:
+
+```rust
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::Self_])
+    .script_src([
+        Source::Self_,
+        Source::Host("js.stripe.com".into()),
+        Source::Host("checkout.paypal.com".into())
+    ])
+    .style_src([
+        Source::Self_,
+        Source::Host("fonts.googleapis.com".into())
+    ])
+    .img_src([
+        Source::Self_,
+        Source::Scheme("https".into()),
+        Source::Scheme("data".into()) // For product images
+    ])
+    .connect_src([
+        Source::Self_,
+        Source::Host("api.stripe.com".into()),
+        Source::Host("api.paypal.com".into()),
+        Source::Scheme("https".into())
+    ])
+    .frame_src([
+        Source::Host("js.stripe.com".into()),
+        Source::Host("checkout.paypal.com".into())
+    ])
+    .font_src([
+        Source::Self_,
+        Source::Scheme("data".into()),
+        Source::Host("fonts.gstatic.com".into())
+    ])
+    .report_uri("/security/csp-report")
+    .build_unchecked();
+```
+
+## Advanced Features
+
+### Nonce-Based CSP
+
+For dynamic content with inline scripts:
+
+```rust
+use actix_web_csp::{csp_middleware_with_nonce, RequestNonce};
+
+async fn secure_page(req: HttpRequest) -> Result<HttpResponse> {
+    let nonce = req.extensions()
+        .get::<RequestNonce>()
+        .map(|n| n.to_string())
+        .unwrap_or_default();
+
+    let html = format!(r#"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <script nonce="{}">
+                console.log('This script is allowed');
+            </script>
+        </head>
+        <body>
+            <h1>Secure Page</h1>
+        </body>
+        </html>
+    "#, nonce);
+
+    Ok(HttpResponse::Ok()
+        .content_type("text/html")
+        .body(html))
+}
+
+let policy = CspPolicyBuilder::new()
+    .default_src([Source::Self_])
+    .script_src([Source::Self_]) // Nonce will be added automatically
+    .build_unchecked();
+
+let app = App::new()
+    .wrap(csp_middleware_with_nonce(policy, 32)) // 32-byte nonce
+    .route("/secure", web::get().to(secure_page));
+```
