@@ -115,6 +115,7 @@ impl CspStats {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn add_header_generation_time(&self, time_ns: usize) {
         self.header_generation_time_ns
             .fetch_add(time_ns, Ordering::Relaxed);
