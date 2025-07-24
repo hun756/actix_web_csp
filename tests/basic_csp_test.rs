@@ -22,7 +22,6 @@ mod tests {
 
         assert_eq!(resp.status(), StatusCode::OK);
 
-        // Check if CSP header exists
         let csp_header = resp.headers().get("content-security-policy");
         assert!(csp_header.is_some(), "CSP header not found");
 
@@ -38,7 +37,6 @@ mod tests {
             .style_src([Source::Self_, Source::UnsafeInline])
             .build_unchecked();
 
-        // Check if policy is correctly built
         assert!(!policy.is_report_only());
     }
 
@@ -48,7 +46,6 @@ mod tests {
         let unsafe_inline = Source::UnsafeInline;
         let scheme_source = Source::Scheme("https".into());
 
-        // Verify basic Source types
         assert!(self_source.is_self());
         assert!(unsafe_inline.is_unsafe_inline());
         assert!(!scheme_source.is_self());
