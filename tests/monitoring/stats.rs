@@ -133,7 +133,8 @@ mod tests {
         assert_eq!(stats1.request_count(), stats2.request_count());
 
         thread::sleep(Duration::from_millis(1));
-        assert!(stats1.uptime_secs() >= 0);
-        assert!(stats2.uptime_secs() >= 0);
+
+        let _uptime1 = stats1.uptime_secs();
+        let _uptime2 = stats2.uptime_secs();
     }
 }
