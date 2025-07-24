@@ -1,6 +1,6 @@
 [package]
 name = "actix_web_csp"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 authors = ["Mehmet Ekemen <ekemenms@gmail.com>"]
 description = "High-performance Content Security Policy middleware for Actix Web"
