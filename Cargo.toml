@@ -11,7 +11,7 @@ homepage = "https://github.com/hun756/actix_web_csp"
 readme = "README.md"
 keywords = ["actix-web", "csp", "security", "middleware", "web"]
 categories = ["web-programming", "web-programming::http-server"]
-exclude = ["target/", "*.log", ".git/", "tests/browser_test.html"]
+exclude = ["target/", "*.log", ".git/"]
 
 [lib]
 name = "actix_web_csp"
