@@ -7,7 +7,7 @@ fn main() {
     println!("Actix Web CSP Middleware Example");
 
     // Create a simple CSP policy
-    let policy = CspPolicyBuilder::new()
+    let _policy = CspPolicyBuilder::new()
         .default_src([Source::Self_])
         .script_src([Source::Self_, Source::UnsafeInline])
         .style_src([Source::Self_, Source::UnsafeInline])
