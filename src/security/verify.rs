@@ -97,10 +97,9 @@ impl PolicyVerifier {
                             self.verification_cache.put(cache_key, result);
                             return Ok(result);
                         } else if let Some(domain) = host.strip_prefix("*.") {
-                            if host_str.len() > domain.len() && host_str.ends_with(domain) {
-                                let prefix_len = host_str.len() - domain.len();
-                                let prefix = &host_str[..prefix_len];
-                                if !prefix.contains('.') && prefix.ends_with('.') {
+                            if host_str.ends_with(domain) {
+                                let domain_with_dot = format!(".{}", domain);
+                                if host_str.ends_with(&domain_with_dot) || host_str == domain {
                                     let result = true;
                                     self.verification_cache.put(cache_key, result);
                                     return Ok(result);

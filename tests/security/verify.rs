@@ -114,29 +114,39 @@ mod tests {
         let script = b"console.log('test');";
         let nonce = "random123";
 
-        let policy = CspPolicyBuilder::new()
-            .script_src([
-                Source::Nonce(Cow::Borrowed(nonce)),
-                Source::Hash {
-                    algorithm: HashAlgorithm::Sha256,
-                    value: Cow::Owned(HashGenerator::generate(HashAlgorithm::Sha256, script)),
-                },
-            ])
+        let policy_hash = CspPolicyBuilder::new()
+            .script_src([Source::Hash {
+                algorithm: HashAlgorithm::Sha256,
+                value: Cow::Owned(HashGenerator::generate(HashAlgorithm::Sha256, script)),
+            }])
             .build_unchecked();
 
-        let verifier = PolicyVerifier::new(policy);
+        let verifier_hash = PolicyVerifier::new(policy_hash);
 
-        assert!(verifier.verify_inline_script(script, Some(nonce)).unwrap());
+        assert!(verifier_hash.verify_inline_script(script, None).unwrap());
 
-        assert!(verifier.verify_inline_script(script, None).unwrap());
+        assert!(!verifier_hash
+            .verify_inline_script(b"console.log('different');", None)
+            .unwrap());
 
-        assert!(!verifier
+        let policy_nonce = CspPolicyBuilder::new()
+            .script_src([Source::Nonce(Cow::Borrowed(nonce))])
+            .build_unchecked();
+
+        let verifier_nonce = PolicyVerifier::new(policy_nonce);
+
+        assert!(verifier_nonce
+            .verify_inline_script(script, Some(nonce))
+            .unwrap());
+        assert!(verifier_nonce
             .verify_inline_script(b"console.log('different');", Some(nonce))
             .unwrap());
 
-        assert!(!verifier
+        assert!(!verifier_nonce
             .verify_inline_script(script, Some("wrong456"))
             .unwrap());
+
+        assert!(!verifier_nonce.verify_inline_script(script, None).unwrap());
     }
 
     #[test]
@@ -145,14 +155,14 @@ mod tests {
         let nonce = "random123";
 
         let policy = CspPolicyBuilder::new()
-            .style_src([Source::Nonce(Cow::Borrowed(nonce)), Source::UnsafeInline])
+            .style_src([Source::Nonce(Cow::Borrowed(nonce))])
             .build_unchecked();
 
         let verifier = PolicyVerifier::new(policy);
 
         assert!(verifier.verify_inline_style(style, Some(nonce)).unwrap());
 
-        assert!(verifier.verify_inline_style(style, None).unwrap());
+        assert!(!verifier.verify_inline_style(style, None).unwrap());
 
         assert!(!verifier
             .verify_inline_style(style, Some("wrong456"))
