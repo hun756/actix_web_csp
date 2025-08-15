@@ -98,18 +98,19 @@
 //! ### With Actix Web Middleware
 //!
 //! ```rust
-//! use actix_web::{web, App, HttpServer};
-//! use actix_web_csp::{csp_middleware, CspConfigBuilder, CspPolicyBuilder, Source};
+//! use actix_web::{web, App, HttpServer, HttpResponse, Result};
+//! use actix_web_csp::{csp_middleware, CspPolicyBuilder, Source};
 //!
-//! let config = CspConfigBuilder::new()
-//!     .policy(CspPolicyBuilder::new()
-//!         .default_src([Source::Self_])
-//!         .build_unchecked())
-//!     .with_nonce_generator(32)
-//!     .build();
+//! async fn handler() -> Result<HttpResponse> {
+//!     Ok(HttpResponse::Ok().body("Hello World"))
+//! }
+//!
+//! let policy = CspPolicyBuilder::new()
+//!     .default_src([Source::Self_])
+//!     .build_unchecked();
 //!
 //! let app = App::new()
-//!     .wrap(csp_middleware(config))
+//!     .wrap(csp_middleware(policy))
 //!     .route("/", web::get().to(handler));
 //! ```
 //!
@@ -122,12 +123,12 @@
 //!
 //! // Add logging listener
 //! config.add_update_listener(|policy| {
-//!     log::info!("CSP policy updated: {} directives", policy.directive_count());
+//!     println!("CSP policy updated: {} directives", policy.directives().count());
 //! });
 //!
-//! // Add metrics listener
+//! // Add notification listener
 //! config.add_update_listener(|_policy| {
-//!     metrics::increment_counter!("csp.policy.updates");
+//!     println!("Policy update notification sent");
 //! });
 //! ```
 
