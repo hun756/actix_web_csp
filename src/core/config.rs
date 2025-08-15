@@ -211,6 +211,26 @@ pub struct CspConfig {
 }
 
 impl CspConfig {
+    /// Creates a new CSP configuration with the given policy.
+    ///
+    /// Initializes all components with default values:
+    /// - No nonce generator
+    /// - 60-second cache duration
+    /// - Default cache size from constants
+    /// - Empty statistics and metrics
+    ///
+    /// # Arguments
+    ///
+    /// * `policy` - The initial CSP policy to use
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::{CspConfig, CspPolicy};
+    ///
+    /// let policy = CspPolicy::default();
+    /// let config = CspConfig::new(policy);
+    /// ```
     pub fn new(policy: CspPolicy) -> Self {
         Self {
             policy: Arc::new(RwLock::new(policy)),
@@ -229,6 +249,29 @@ impl CspConfig {
         }
     }
 
+    /// Updates the CSP policy using the provided closure.
+    ///
+    /// This method provides thread-safe policy updates and automatically:
+    /// - Notifies all registered update listeners
+    /// - Clears the policy cache to ensure consistency
+    /// - Increments policy update statistics
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - Closure that receives a mutable reference to the policy
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::{CspConfig, CspPolicy, Source};
+    ///
+    /// let config = CspConfig::new(CspPolicy::default());
+    ///
+    /// config.update_policy(|policy| {
+    ///     // Add a new script source
+    ///     // policy.add_script_src(Source::Host("cdn.example.com".into()));
+    /// });
+    /// ```
     pub fn update_policy<F>(&self, f: F)
     where
         F: FnOnce(&mut CspPolicy),
@@ -249,11 +292,43 @@ impl CspConfig {
         self.stats.increment_policy_update_count();
     }
 
+    /// Returns a cloned reference to the CSP policy.
+    ///
+    /// The policy is wrapped in `Arc<RwLock<CspPolicy>>` for thread-safe access.
+    /// Multiple threads can hold read locks simultaneously, but write access is exclusive.
+    ///
+    /// # Returns
+    ///
+    /// `Arc<RwLock<CspPolicy>>` - Thread-safe reference to the policy
     #[inline]
     pub fn policy(&self) -> Arc<RwLock<CspPolicy>> {
         self.policy.clone()
     }
 
+    /// Generates a new cryptographic nonce if a generator is configured.
+    ///
+    /// Nonces are used to allow specific inline scripts and styles while maintaining
+    /// security. Each nonce should be unique per request and included in the CSP header.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(String)` - A base64-encoded nonce if generator is available
+    /// * `None` - If no nonce generator is configured
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::{CspConfigBuilder, CspPolicy};
+    ///
+    /// let config = CspConfigBuilder::new()
+    ///     .policy(CspPolicy::default())
+    ///     .with_nonce_generator(32) // 32-byte nonces
+    ///     .build();
+    ///
+    /// if let Some(nonce) = config.generate_nonce() {
+    ///     println!("Use this nonce in your HTML: {}", nonce);
+    /// }
+    /// ```
     pub fn generate_nonce(&self) -> Option<String> {
         if let Some(generator) = &self.nonce_generator {
             self.stats.increment_nonce_generation_count();
@@ -263,6 +338,37 @@ impl CspConfig {
         }
     }
 
+    /// Gets or generates a nonce for a specific request.
+    ///
+    /// When per-request nonces are enabled, this method ensures each request gets
+    /// a unique nonce that remains consistent throughout the request lifecycle.
+    /// The nonce is cached using the request ID as the key.
+    ///
+    /// # Arguments
+    ///
+    /// * `request_id` - Unique identifier for the request
+    ///
+    /// # Returns
+    ///
+    /// * `Some(String)` - The nonce for this request (existing or newly generated)
+    /// * `None` - If per-request nonces are disabled or no generator is configured
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::{CspConfigBuilder, CspPolicy};
+    ///
+    /// let config = CspConfigBuilder::new()
+    ///     .policy(CspPolicy::default())
+    ///     .with_nonce_generator(32)
+    ///     .with_nonce_per_request(true)
+    ///     .build();
+    ///
+    /// let request_id = "req_12345";
+    /// let nonce1 = config.get_or_generate_request_nonce(request_id);
+    /// let nonce2 = config.get_or_generate_request_nonce(request_id);
+    /// // nonce1 == nonce2 (same request gets same nonce)
+    /// ```
     pub fn get_or_generate_request_nonce(&self, request_id: &str) -> Option<String> {
         if !self
             .nonce_per_request
@@ -285,16 +391,61 @@ impl CspConfig {
         )
     }
 
+    /// Returns a reference to the statistics collector.
+    ///
+    /// The statistics collector tracks various CSP-related metrics including
+    /// policy updates, nonce generations, cache hits/misses, and violation counts.
+    ///
+    /// # Returns
+    ///
+    /// `&Arc<CspStats>` - Reference to the statistics collector
     #[inline]
     pub fn stats(&self) -> &Arc<CspStats> {
         &self.stats
     }
 
+    /// Returns a reference to the performance metrics collector.
+    ///
+    /// Performance metrics track timing information, memory usage, and throughput
+    /// statistics for CSP operations.
+    ///
+    /// # Returns
+    ///
+    /// `&Arc<PerformanceMetrics>` - Reference to the performance metrics collector
     #[inline]
     pub fn perf_metrics(&self) -> &Arc<PerformanceMetrics> {
         &self.perf_metrics
     }
 
+    /// Registers a callback function to be called when the policy is updated.
+    ///
+    /// Update listeners are useful for implementing custom logic that should run
+    /// whenever the CSP policy changes, such as logging, notifications, or
+    /// cache invalidation in external systems.
+    ///
+    /// # Arguments
+    ///
+    /// * `f` - Callback function that receives a mutable reference to the updated policy
+    ///
+    /// # Returns
+    ///
+    /// `usize` - Unique listener ID that can be used to remove the listener later
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::{CspConfig, CspPolicy};
+    ///
+    /// let config = CspConfig::new(CspPolicy::default());
+    ///
+    /// let listener_id = config.add_update_listener(|policy| {
+    ///     println!("Policy updated!");
+    ///     // Custom logic here
+    /// });
+    ///
+    /// // Later, remove the listener
+    /// config.remove_update_listener(listener_id);
+    /// ```
     pub fn add_update_listener<F>(&self, f: F) -> usize
     where
         F: Fn(&mut CspPolicy) + Send + Sync + 'static,
@@ -306,16 +457,38 @@ impl CspConfig {
         id
     }
 
+    /// Removes a previously registered update listener.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The listener ID returned by `add_update_listener`
+    ///
+    /// # Returns
+    ///
+    /// `bool` - `true` if the listener was found and removed, `false` otherwise
     #[inline]
     pub fn remove_update_listener(&self, id: usize) -> bool {
         self.update_listeners.remove(&id).is_some()
     }
 
+    /// Clears all cached per-request nonces.
+    ///
+    /// This method should be called periodically to prevent memory leaks from
+    /// accumulating request nonces. Typically called during cleanup or when
+    /// memory pressure is detected.
     #[inline]
     pub fn clear_request_nonces(&self) {
         self.per_request_nonces.clear();
     }
 
+    /// Returns the current cache duration setting.
+    ///
+    /// The cache duration determines how long compiled policies are kept in
+    /// the LRU cache before being eligible for eviction.
+    ///
+    /// # Returns
+    ///
+    /// `Duration` - Current cache duration
     #[inline]
     pub fn cache_duration(&self) -> Duration {
         Duration::from_secs(
@@ -324,11 +497,37 @@ impl CspConfig {
         )
     }
 
+    /// Retrieves a cached policy by its hash.
+    ///
+    /// The policy cache uses LRU eviction to manage memory usage while providing
+    /// fast access to frequently used policy configurations.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash` - Hash of the policy configuration to retrieve
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Arc<CspPolicy>)` - Cached policy if found
+    /// * `None` - If policy is not in cache
     pub fn get_cached_policy(&self, hash: NonZeroU64) -> Option<Arc<CspPolicy>> {
         let mut cache = self.policy_cache.write();
         cache.get(&hash).cloned()
     }
 
+    /// Stores a policy in the cache with the given hash.
+    ///
+    /// If the cache is full, the least recently used policy will be evicted
+    /// to make room for the new policy.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash` - Hash key for the policy
+    /// * `policy` - Policy to cache
+    ///
+    /// # Returns
+    ///
+    /// `Arc<CspPolicy>` - The cached policy wrapped in Arc
     pub fn cache_policy(&self, hash: NonZeroU64, policy: CspPolicy) -> Arc<CspPolicy> {
         let policy_arc = Arc::new(policy);
         let mut cache = self.policy_cache.write();
@@ -336,6 +535,26 @@ impl CspConfig {
         policy_arc
     }
 
+    /// Adds default security directives if they are not already present.
+    ///
+    /// This method ensures that essential security directives are configured:
+    /// - `default-src 'self'` - Restricts all resources to same origin by default
+    /// - `object-src 'none'` - Blocks potentially dangerous object/embed elements
+    ///
+    /// These defaults provide a secure baseline that can be customized as needed.
+    ///
+    /// # Returns
+    ///
+    /// `Self` - The configuration instance for method chaining
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::{CspConfig, CspPolicy};
+    ///
+    /// let config = CspConfig::new(CspPolicy::default())
+    ///     .with_default_directives();
+    /// ```
     pub fn with_default_directives(self) -> Self {
         {
             let mut policy = self.policy.write();
@@ -357,6 +576,26 @@ impl CspConfig {
     }
 }
 
+/// Builder for constructing CSP configurations.
+///
+/// `CspConfigBuilder` provides a fluent interface for creating `CspConfig` instances
+/// with custom settings. It follows the builder pattern, allowing method chaining
+/// for clean and readable configuration setup.
+///
+/// # Examples
+///
+/// ```rust
+/// use actix_web_csp::{CspConfigBuilder, CspPolicy};
+/// use std::time::Duration;
+///
+/// let config = CspConfigBuilder::new()
+///     .policy(CspPolicy::default())
+///     .with_nonce_generator(32)
+///     .with_nonce_per_request(true)
+///     .with_cache_duration(Duration::from_secs(300))
+///     .with_cache_size(1000)
+///     .build();
+/// ```
 #[derive(Default)]
 pub struct CspConfigBuilder {
     policy: Option<CspPolicy>,
