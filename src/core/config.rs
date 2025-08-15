@@ -598,63 +598,154 @@ impl CspConfig {
 /// ```
 #[derive(Default)]
 pub struct CspConfigBuilder {
+    /// The CSP policy to use
     policy: Option<CspPolicy>,
+    /// Length of generated nonces in bytes
     nonce_length: Option<usize>,
+    /// Whether to generate unique nonces per request
     nonce_per_request: bool,
+    /// Optional header name for nonce transmission
     nonce_request_header: Option<Cow<'static, str>>,
+    /// Cache duration for policy caching
     cache_duration: Option<Duration>,
+    /// Maximum number of cached policies
     cache_size: Option<usize>,
+    /// Pre-built nonce generator instance
     nonce_generator: Option<Arc<NonceGenerator>>,
 }
 
 impl CspConfigBuilder {
+    /// Creates a new builder instance with default values.
     #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets the CSP policy to use.
+    ///
+    /// # Arguments
+    ///
+    /// * `policy` - The CSP policy configuration
     #[inline]
     pub fn policy(mut self, policy: CspPolicy) -> Self {
         self.policy = Some(policy);
         self
     }
 
+    /// Configures automatic nonce generation with the specified length.
+    ///
+    /// Creates a new `NonceGenerator` with the given byte length. Nonces are
+    /// base64-encoded, so the final string length will be longer than the byte length.
+    ///
+    /// # Arguments
+    ///
+    /// * `length` - Length of the nonce in bytes (recommended: 16-32 bytes)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::CspConfigBuilder;
+    ///
+    /// let config = CspConfigBuilder::new()
+    ///     .with_nonce_generator(32) // 32-byte nonces
+    ///     .build();
+    /// ```
     #[inline]
     pub fn with_nonce_generator(mut self, length: usize) -> Self {
         self.nonce_length = Some(length);
         self
     }
 
+    /// Uses a pre-built nonce generator instance.
+    ///
+    /// This allows for custom nonce generation logic or sharing a generator
+    /// across multiple configurations.
+    ///
+    /// # Arguments
+    ///
+    /// * `generator` - Pre-configured nonce generator
     #[inline]
     pub fn with_prebuilt_nonce_generator(mut self, generator: Arc<NonceGenerator>) -> Self {
         self.nonce_generator = Some(generator);
         self
     }
 
+    /// Enables or disables per-request nonce generation.
+    ///
+    /// When enabled, each request gets a unique nonce that remains consistent
+    /// throughout the request lifecycle. This is useful for applications that
+    /// need to include the same nonce in multiple places within a single response.
+    ///
+    /// # Arguments
+    ///
+    /// * `enabled` - Whether to enable per-request nonces
     #[inline]
     pub fn with_nonce_per_request(mut self, enabled: bool) -> Self {
         self.nonce_per_request = enabled;
         self
     }
 
+    /// Sets the header name for nonce transmission.
+    ///
+    /// # Arguments
+    ///
+    /// * `header` - Header name to use for nonce transmission
     #[inline]
     pub fn with_nonce_request_header(mut self, header: impl Into<Cow<'static, str>>) -> Self {
         self.nonce_request_header = Some(header.into());
         self
     }
 
+    /// Sets the cache duration for policy caching.
+    ///
+    /// Policies are cached to improve performance. This setting controls how long
+    /// compiled policies remain in the cache before being eligible for eviction.
+    ///
+    /// # Arguments
+    ///
+    /// * `duration` - Cache duration (default: 60 seconds)
     #[inline]
     pub fn with_cache_duration(mut self, duration: Duration) -> Self {
         self.cache_duration = Some(duration);
         self
     }
 
+    /// Sets the maximum number of cached policies.
+    ///
+    /// The cache uses LRU eviction, so when the limit is reached, the least
+    /// recently used policies are removed to make room for new ones.
+    ///
+    /// # Arguments
+    ///
+    /// * `size` - Maximum number of cached policies
     #[inline]
     pub fn with_cache_size(mut self, size: usize) -> Self {
         self.cache_size = Some(size);
         self
     }
 
+    /// Builds the final CSP configuration.
+    ///
+    /// Creates a `CspConfig` instance with all the specified settings. If no policy
+    /// is provided, a default policy is used. The builder configures all components
+    /// according to the specified options.
+    ///
+    /// # Returns
+    ///
+    /// `CspConfig` - The configured CSP instance
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use actix_web_csp::{CspConfigBuilder, CspPolicy};
+    /// use std::time::Duration;
+    ///
+    /// let config = CspConfigBuilder::new()
+    ///     .policy(CspPolicy::default())
+    ///     .with_nonce_generator(32)
+    ///     .with_cache_duration(Duration::from_secs(300))
+    ///     .build();
+    /// ```
     pub fn build(self) -> CspConfig {
         let policy = self.policy.unwrap_or_default();
         let mut config = CspConfig::new(policy);
