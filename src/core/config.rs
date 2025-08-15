@@ -150,20 +150,63 @@ use std::{
     time::Duration,
 };
 
+/// Function type for policy update listeners.
 type UpdateFn = Box<dyn Fn(&mut CspPolicy) + Send + Sync + 'static>;
 
+/// Core CSP configuration container.
+///
+/// `CspConfig` manages all aspects of Content Security Policy configuration
+/// including policy storage, nonce generation, caching, and performance
+/// monitoring. It provides thread-safe access to CSP policies and supports
+/// dynamic policy updates.
+///
+/// # Features
+///
+/// - **Thread-safe policy management** - Concurrent read/write access using
+/// RwLock
+/// - **Nonce generation** - Optional cryptographic nonce generation for inline
+/// content
+/// - **Policy caching** - LRU cache for compiled policies to improve
+/// performance
+/// - **Real-time monitoring** - Built-in statistics and performance metrics
+/// - **Update listeners** - Callbacks for policy change notifications
+///
+/// # Examples
+///
+/// ```rust
+/// use actix_web_csp::{CspConfig, CspPolicy};
+///
+/// let policy = CspPolicy::default();
+/// let config = CspConfig::new(policy);
+///
+/// // Generate a nonce if configured
+/// if let Some(nonce) = config.generate_nonce() {
+///     println!("Generated nonce: {}", nonce);
+/// }
+/// ```
 #[derive(Clone)]
 pub struct CspConfig {
+    /// The CSP policy wrapped in Arc<RwLock> for thread-safe access
     policy: Arc<RwLock<CspPolicy>>,
+    /// Optional nonce generator for inline content security
     nonce_generator: Option<Arc<NonceGenerator>>,
+    /// Flag to enable per-request nonce generation
     nonce_per_request: Arc<AtomicBool>,
+    /// Cache for per-request nonces indexed by request ID
     per_request_nonces: Arc<DashMap<String, String>>,
+    /// Optional header name for nonce transmission
     nonce_request_header: Option<Cow<'static, str>>,
+    /// Cache duration in seconds for policy caching
     cache_duration: Arc<AtomicUsize>,
+    /// Statistics collector for monitoring
     stats: Arc<CspStats>,
+    /// Performance metrics collector
     perf_metrics: Arc<PerformanceMetrics>,
+    /// Registered update listeners for policy changes
     update_listeners: Arc<DashMap<usize, UpdateFn>>,
+    /// Counter for generating unique listener IDs
     next_listener_id: Arc<AtomicUsize>,
+    /// LRU cache for compiled policies
     policy_cache: Arc<RwLock<LruCache<NonZeroU64, Arc<CspPolicy>>>>,
 }
 
