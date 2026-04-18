@@ -16,7 +16,7 @@ use futures::{
 use log;
 use std::{borrow::Cow, pin::Pin, sync::Arc};
 
-type ViolationHandler = Arc<dyn Fn(CspViolationReport) + Send + Sync + 'static>;
+pub(crate) type ViolationHandler = Arc<dyn Fn(CspViolationReport) + Send + Sync + 'static>;
 
 pub struct CspReportingMiddleware {
     handler: ViolationHandler,
@@ -114,27 +114,11 @@ where
             Box::pin(async move {
                 let (http_req, mut payload) = req.into_parts();
                 let body = match web::Bytes::from_request(&http_req, &mut payload).await {
-                    Ok(bytes) => {
-                        if bytes.len() > max_size {
-                            return Err(ErrorBadRequest("CSP report too large"));
-                        }
-                        bytes
-                    }
+                    Ok(bytes) => bytes,
                     Err(e) => return Err(Error::from(e)),
                 };
 
-                match process_violation_report(&body) {
-                    Ok(Some(report)) => {
-                        stats.increment_violation_count();
-                        handler(report);
-                    }
-                    Ok(None) => {
-                        log::debug!("CSP violation report missing 'csp-report' field");
-                    }
-                    Err(e) => {
-                        log::error!("Failed to process CSP violation report: {}", e);
-                    }
-                }
+                process_violation_bytes(&body, max_size, &stats, &handler)?;
 
                 let response = HttpResponse::Ok().finish().map_into_right_body();
                 Ok(ServiceResponse::new(http_req, response))
@@ -150,7 +134,9 @@ where
 }
 
 #[inline]
-fn process_violation_report(bytes: &[u8]) -> Result<Option<CspViolationReport>, serde_json::Error> {
+pub(crate) fn process_violation_report(
+    bytes: &[u8],
+) -> Result<Option<CspViolationReport>, serde_json::Error> {
     let mut deserializer = serde_json::Deserializer::from_slice(bytes);
     let json: serde_json::Value = serde::Deserialize::deserialize(&mut deserializer)?;
 
@@ -160,6 +146,32 @@ fn process_violation_report(bytes: &[u8]) -> Result<Option<CspViolationReport>, 
     } else {
         Ok(None)
     }
+}
+
+pub(crate) fn process_violation_bytes(
+    bytes: &[u8],
+    max_size: usize,
+    stats: &crate::monitoring::stats::CspStats,
+    handler: &ViolationHandler,
+) -> Result<(), Error> {
+    if bytes.len() > max_size {
+        return Err(ErrorBadRequest("CSP report too large"));
+    }
+
+    match process_violation_report(bytes) {
+        Ok(Some(report)) => {
+            stats.increment_violation_count();
+            handler(report);
+        }
+        Ok(None) => {
+            log::debug!("CSP violation report missing 'csp-report' field");
+        }
+        Err(e) => {
+            log::error!("Failed to process CSP violation report: {}", e);
+        }
+    }
+
+    Ok(())
 }
 
 #[inline]

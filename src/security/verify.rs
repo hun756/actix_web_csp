@@ -7,6 +7,7 @@ use url::Url;
 
 pub struct PolicyVerifier {
     policy: CspPolicy,
+    origin: Option<Url>,
     url_cache: HashMap<String, Url>,
     host_cache: FxHashSet<String>,
     verification_cache: lru::LruCache<u64, bool>,
@@ -17,10 +18,30 @@ impl PolicyVerifier {
     pub fn new(policy: CspPolicy) -> Self {
         Self {
             policy,
+            origin: None,
             url_cache: HashMap::with_capacity(256),
             host_cache: FxHashSet::with_capacity_and_hasher(128, Default::default()),
             verification_cache: lru::LruCache::new(std::num::NonZeroUsize::new(512).unwrap()),
         }
+    }
+
+    pub fn with_origin(
+        policy: CspPolicy,
+        origin: impl AsRef<str>,
+    ) -> Result<Self, CspError> {
+        let mut verifier = Self::new(policy);
+        verifier.set_origin(origin)?;
+        Ok(verifier)
+    }
+
+    pub fn set_origin(&mut self, origin: impl AsRef<str>) -> Result<(), CspError> {
+        let parsed_origin = Url::parse(origin.as_ref()).map_err(|error| {
+            CspError::VerificationError(format!("Invalid origin '{}': {}", origin.as_ref(), error))
+        })?;
+
+        self.origin = Some(parsed_origin);
+        self.verification_cache.clear();
+        Ok(())
     }
 
     pub fn verify_uri(&mut self, uri: &str, directive_name: &str) -> Result<bool, CspError> {
@@ -48,15 +69,15 @@ impl PolicyVerifier {
             }
         };
 
-        let uri_url = if let Some(cached) = self.url_cache.get(uri) {
-            cached
+        let parsed_url = if let Some(cached) = self.url_cache.get(uri) {
+            cached.clone()
         } else {
             match Url::parse(uri) {
                 Ok(url) => {
                     if self.url_cache.len() < 256 {
                         self.url_cache.insert(uri.to_string(), url.clone());
                     }
-                    &self.url_cache[uri]
+                    url
                 }
                 Err(_) => {
                     let result = false;
@@ -73,8 +94,8 @@ impl PolicyVerifier {
             return Ok(result);
         }
 
-        let uri_scheme = uri_url.scheme();
-        let uri_host = uri_url.host_str();
+        let uri_scheme = parsed_url.scheme();
+        let uri_host = parsed_url.host_str();
 
         for source in sources {
             match source {
@@ -84,7 +105,7 @@ impl PolicyVerifier {
                     return Ok(result);
                 }
                 Source::Self_ => {
-                    if self.is_same_origin(uri_url) {
+                    if self.is_same_origin(&parsed_url) {
                         let result = true;
                         self.verification_cache.put(cache_key, result);
                         return Ok(result);
@@ -182,25 +203,10 @@ impl PolicyVerifier {
 
     #[inline]
     fn is_same_origin(&self, url: &Url) -> bool {
-        if let Some(directive) = self.policy.get_directive("origin") {
-            for source in directive.sources() {
-                if let Source::Host(host) = source {
-                    if let Some(url_host) = url.host_str() {
-                        if url_host == host.as_ref() {
-                            return true;
-                        }
-                    }
-
-                    if let Ok(origin_url) = Url::parse(&format!("https://{}", host)) {
-                        if url.scheme() == origin_url.scheme()
-                            && url.host_str() == origin_url.host_str()
-                            && url.port() == origin_url.port()
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
+        if let Some(origin) = &self.origin {
+            return url.scheme() == origin.scheme()
+                && url.host_str() == origin.host_str()
+                && url.port_or_known_default() == origin.port_or_known_default();
         }
 
         false
