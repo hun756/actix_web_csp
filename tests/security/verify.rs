@@ -19,6 +19,22 @@ mod tests {
     }
 
     #[test]
+    fn test_policy_verifier_with_origin_supports_self() {
+        let policy = CspPolicyBuilder::new()
+            .script_src([Source::Self_])
+            .build_unchecked();
+
+        let mut verifier = PolicyVerifier::with_origin(policy, "https://app.example.com").unwrap();
+
+        assert!(verifier
+            .verify_uri("https://app.example.com/assets/app.js", "script-src")
+            .unwrap());
+        assert!(!verifier
+            .verify_uri("https://cdn.example.com/assets/app.js", "script-src")
+            .unwrap());
+    }
+
+    #[test]
     fn test_verify_uri_allowed() {
         let policy = CspPolicyBuilder::new()
             .default_src([Source::Self_])
@@ -268,5 +284,19 @@ mod tests {
         assert!(!verifier
             .verify_uri("https://evil.com/script.js", "script-src")
             .unwrap());
+    }
+
+    #[test]
+    fn test_verify_uri_does_not_panic_when_url_cache_is_full() {
+        let policy = CspPolicyBuilder::new()
+            .script_src([Source::Host(Cow::Borrowed("allowed.example.com"))])
+            .build_unchecked();
+
+        let mut verifier = PolicyVerifier::new(policy);
+
+        for index in 0..300 {
+            let uri = format!("https://blocked{}.example.com/script.js", index);
+            assert!(!verifier.verify_uri(&uri, "script-src").unwrap());
+        }
     }
 }

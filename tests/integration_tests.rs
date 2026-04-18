@@ -1,6 +1,10 @@
-use actix_web::{test, web, App, HttpResponse, Result};
-use actix_web_csp::{csp_middleware, CspPolicyBuilder, Source};
+use actix_web::{test, web, App, HttpMessage, HttpRequest, HttpResponse, Result};
+use actix_web_csp::{
+    csp_middleware, csp_middleware_with_nonce, csp_middleware_with_request_nonce,
+    csp_with_reporting, CspPolicyBuilder, CspViolationReport, RequestNonce, Source,
+};
 use std::borrow::Cow;
+use std::sync::{Arc, Mutex};
 
 async fn test_page_with_nonce() -> Result<HttpResponse> {
     let html = r#"<!DOCTYPE html>
@@ -40,6 +44,16 @@ async fn test_api_endpoint() -> Result<HttpResponse> {
         "status": "success",
         "data": "API is working"
     })))
+}
+
+async fn test_page_returning_nonce(req: HttpRequest) -> Result<HttpResponse> {
+    let nonce = req
+        .extensions()
+        .get::<RequestNonce>()
+        .map(|value| value.to_string())
+        .unwrap_or_default();
+
+    Ok(HttpResponse::Ok().body(nonce))
 }
 
 #[cfg(test)]
@@ -101,6 +115,67 @@ mod integration_tests {
 
         let csp_value = csp_header.unwrap().to_str().unwrap();
         assert!(csp_value.contains("script-src"));
+    }
+
+    #[actix_web::test]
+    async fn test_runtime_nonce_is_injected_into_header_and_request_extensions() {
+        let policy = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .script_src([Source::Self_])
+            .style_src([Source::Self_])
+            .build_unchecked();
+
+        let app = test::init_service(
+            App::new()
+                .wrap(csp_middleware_with_request_nonce(policy, 16))
+                .route("/nonce", web::get().to(test_page_returning_nonce)),
+        )
+        .await;
+
+        let req = test::TestRequest::get().uri("/nonce").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let nonce = test::read_body(resp).await;
+        let nonce = String::from_utf8(nonce.to_vec()).unwrap();
+        assert!(!nonce.is_empty());
+
+        let req = test::TestRequest::get().uri("/nonce").to_request();
+        let resp = test::call_service(&app, req).await;
+        let csp_header = resp.headers().get("content-security-policy").unwrap();
+        let csp_value = csp_header.to_str().unwrap().to_owned();
+        let response_nonce = test::read_body(resp).await;
+        let response_nonce = String::from_utf8(response_nonce.to_vec()).unwrap();
+
+        assert!(csp_value.contains(&format!("'nonce-{}'", response_nonce)));
+        assert_ne!(nonce, response_nonce);
+    }
+
+    #[actix_web::test]
+    async fn test_nonce_middleware_exposes_request_nonce_without_cache_mode() {
+        let policy = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .script_src([Source::Self_])
+            .build_unchecked();
+
+        let app = test::init_service(
+            App::new()
+                .wrap(csp_middleware_with_nonce(policy, 16))
+                .route("/nonce-once", web::get().to(test_page_returning_nonce)),
+        )
+        .await;
+
+        let req = test::TestRequest::get().uri("/nonce-once").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let csp_header = resp.headers().get("content-security-policy").unwrap();
+        let csp_value = csp_header.to_str().unwrap().to_owned();
+        let body = test::read_body(resp).await;
+        let nonce = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(!nonce.is_empty());
+        assert!(csp_value.contains(&format!("'nonce-{}'", nonce)));
     }
 
     #[actix_web::test]
@@ -250,9 +325,18 @@ mod integration_tests {
             .report_to("csp-endpoint")
             .build_unchecked();
 
+        let reports: Arc<Mutex<Vec<CspViolationReport>>> = Arc::new(Mutex::new(Vec::new()));
+        let handler_reports = reports.clone();
+        let handler = move |report: CspViolationReport| {
+            handler_reports.lock().unwrap().push(report);
+        };
+
+        let (middleware, configure_reporting) = csp_with_reporting(policy, handler);
+
         let app = test::init_service(
             App::new()
-                .wrap(csp_middleware(policy))
+                .wrap(middleware)
+                .configure(configure_reporting)
                 .route("/test-reporting", web::get().to(test_api_endpoint)),
         )
         .await;
@@ -268,6 +352,30 @@ mod integration_tests {
         let csp_value = csp_header.unwrap().to_str().unwrap();
         assert!(csp_value.contains("report-uri /csp-violations"));
         assert!(csp_value.contains("report-to csp-endpoint"));
+
+        let report_body = serde_json::json!({
+            "csp-report": {
+                "document-uri": "https://example.com",
+                "referrer": "",
+                "blocked-uri": "https://evil.com/script.js",
+                "violated-directive": "script-src-elem",
+                "effective-directive": "script-src-elem",
+                "original-policy": csp_value,
+                "disposition": "enforce"
+            }
+        });
+
+        let report_req = test::TestRequest::post()
+            .uri("/csp-violations")
+            .set_json(&report_body)
+            .to_request();
+
+        let report_resp = test::call_service(&app, report_req).await;
+        assert_eq!(report_resp.status(), StatusCode::OK);
+
+        let stored_reports = reports.lock().unwrap();
+        assert_eq!(stored_reports.len(), 1);
+        assert_eq!(stored_reports[0].blocked_uri, "https://evil.com/script.js");
     }
 
     #[actix_web::test]

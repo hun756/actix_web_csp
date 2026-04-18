@@ -48,4 +48,5 @@ pub(crate) const SEMICOLON_SPACE: &[u8] = b"; ";
 
 pub(crate) const DEFAULT_BUFFER_CAPACITY: usize = 1024;
 pub(crate) const DEFAULT_POLICY_CACHE_ENTRIES: usize = 64;
+pub(crate) const DEFAULT_REQUEST_NONCE_CACHE_ENTRIES: usize = 1024;
 pub(crate) const NONCE_BUFFER_POOL_SIZE: usize = 32;

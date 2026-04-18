@@ -1,6 +1,7 @@
 use crate::constants::{
     DEFAULT_BUFFER_CAPACITY, DEFAULT_CACHE_DURATION_SECS, HEADER_CSP, HEADER_CSP_REPORT_ONLY,
-    REPORT_TO, REPORT_URI, SEMICOLON_SPACE,
+    REPORT_TO, REPORT_URI, SCRIPT_SRC, SCRIPT_SRC_ELEM, SEMICOLON_SPACE, STYLE_SRC,
+    STYLE_SRC_ELEM,
 };
 use crate::core::directives::{Directive, DirectiveSpec, Sandbox};
 use crate::core::source::Source;
@@ -244,6 +245,33 @@ impl CspPolicy {
     #[inline]
     pub fn contains_hash(&self) -> bool {
         self.directives.values().any(|d| d.contains_hash())
+    }
+
+    /// Returns a cloned policy with the nonce appended to nonce-aware directives.
+    pub fn clone_with_runtime_nonce(&self, nonce: impl AsRef<str>) -> Self {
+        let mut policy = self.clone();
+        policy.inject_runtime_nonce(nonce);
+        policy
+    }
+
+    /// Appends the nonce to script/style directives on the current policy.
+    pub fn inject_runtime_nonce(&mut self, nonce: impl AsRef<str>) -> &mut Self {
+        let nonce: Cow<'static, str> = Cow::Owned(nonce.as_ref().to_owned());
+        let mut updated = false;
+
+        for directive_name in [SCRIPT_SRC, STYLE_SRC, SCRIPT_SRC_ELEM, STYLE_SRC_ELEM] {
+            if let Some(directive) = self.directives.get_mut(directive_name) {
+                directive.add_source(Source::Nonce(nonce.clone()));
+                updated = true;
+            }
+        }
+
+        if updated {
+            self.cached_header_value = None;
+            self.policy_hash = None;
+        }
+
+        self
     }
 }
 

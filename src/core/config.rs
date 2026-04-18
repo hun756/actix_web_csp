@@ -132,15 +132,16 @@
 //! });
 //! ```
 
-use crate::constants::DEFAULT_POLICY_CACHE_ENTRIES;
+use crate::constants::{
+    DEFAULT_POLICY_CACHE_ENTRIES, DEFAULT_REQUEST_NONCE_CACHE_ENTRIES,
+};
 use crate::core::directives::DirectiveSpec;
 use crate::core::policy::CspPolicy;
 use crate::monitoring::perf::PerformanceMetrics;
 use crate::monitoring::stats::CspStats;
 use crate::security::nonce::NonceGenerator;
-use dashmap::DashMap;
 use lru::LruCache;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::{
     borrow::Cow,
@@ -193,8 +194,8 @@ pub struct CspConfig {
     nonce_generator: Option<Arc<NonceGenerator>>,
     /// Flag to enable per-request nonce generation
     nonce_per_request: Arc<AtomicBool>,
-    /// Cache for per-request nonces indexed by request ID
-    per_request_nonces: Arc<DashMap<String, String>>,
+    /// Bounded cache for per-request nonces indexed by request ID
+    per_request_nonces: Arc<Mutex<LruCache<String, String>>>,
     /// Optional header name for nonce transmission
     nonce_request_header: Option<Cow<'static, str>>,
     /// Cache duration in seconds for policy caching
@@ -204,7 +205,7 @@ pub struct CspConfig {
     /// Performance metrics collector
     perf_metrics: Arc<PerformanceMetrics>,
     /// Registered update listeners for policy changes
-    update_listeners: Arc<DashMap<usize, UpdateFn>>,
+    update_listeners: Arc<dashmap::DashMap<usize, UpdateFn>>,
     /// Counter for generating unique listener IDs
     next_listener_id: Arc<AtomicUsize>,
     /// LRU cache for compiled policies
@@ -237,12 +238,14 @@ impl CspConfig {
             policy: Arc::new(RwLock::new(policy)),
             nonce_generator: None,
             nonce_per_request: Arc::new(AtomicBool::new(false)),
-            per_request_nonces: Arc::new(DashMap::new()),
+            per_request_nonces: Arc::new(Mutex::new(LruCache::new(
+                NonZeroUsize::new(DEFAULT_REQUEST_NONCE_CACHE_ENTRIES).unwrap(),
+            ))),
             nonce_request_header: None,
             cache_duration: Arc::new(AtomicUsize::new(60)),
             stats: Arc::new(CspStats::new()),
             perf_metrics: Arc::new(PerformanceMetrics::new()),
-            update_listeners: Arc::new(DashMap::new()),
+            update_listeners: Arc::new(dashmap::DashMap::new()),
             next_listener_id: Arc::new(AtomicUsize::new(0)),
             policy_cache: Arc::new(RwLock::new(LruCache::new(
                 NonZeroUsize::new(DEFAULT_POLICY_CACHE_ENTRIES).unwrap(),
@@ -379,17 +382,16 @@ impl CspConfig {
         }
 
         let generator = self.nonce_generator.as_ref()?;
+        let mut nonce_cache = self.per_request_nonces.lock();
 
-        Some(
-            self.per_request_nonces
-                .entry(request_id.to_string())
-                .or_insert_with(|| {
-                    self.stats.increment_nonce_generation_count();
-                    generator.generate()
-                })
-                .value()
-                .clone(),
-        )
+        if let Some(existing) = nonce_cache.get(request_id) {
+            return Some(existing.clone());
+        }
+
+        self.stats.increment_nonce_generation_count();
+        let nonce = generator.generate();
+        nonce_cache.put(request_id.to_string(), nonce.clone());
+        Some(nonce)
     }
 
     /// Returns a reference to the statistics collector.
@@ -416,6 +418,12 @@ impl CspConfig {
     #[inline]
     pub fn perf_metrics(&self) -> &Arc<PerformanceMetrics> {
         &self.perf_metrics
+    }
+
+    /// Returns the optional header name used to expose a generated nonce.
+    #[inline]
+    pub fn nonce_request_header(&self) -> Option<&str> {
+        self.nonce_request_header.as_deref()
     }
 
     /// Registers a callback function to be called when the policy is updated.
@@ -479,7 +487,7 @@ impl CspConfig {
     /// memory pressure is detected.
     #[inline]
     pub fn clear_request_nonces(&self) {
-        self.per_request_nonces.clear();
+        self.per_request_nonces.lock().clear();
     }
 
     /// Returns the current cache duration setting.
@@ -534,6 +542,28 @@ impl CspConfig {
         let mut cache = self.policy_cache.write();
         cache.put(hash, policy_arc.clone());
         policy_arc
+    }
+
+    #[inline]
+    pub(crate) fn prepare_request_nonce(&self, request_id: &str) -> Option<String> {
+        if self
+            .nonce_per_request
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            self.get_or_generate_request_nonce(request_id)
+        } else {
+            self.generate_nonce()
+        }
+    }
+
+    #[inline]
+    pub(crate) fn remove_request_nonce(&self, request_id: &str) {
+        if self
+            .nonce_per_request
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            self.per_request_nonces.lock().pop(request_id);
+        }
     }
 
     /// Adds default security directives if they are not already present.

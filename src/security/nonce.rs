@@ -9,14 +9,13 @@ use std::{
         atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc,
     },
-    time::Instant,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Debug)]
 pub struct NonceGenerator {
     length: AtomicUsize,
     buffer_pool: Arc<Mutex<SmallVec<[Vec<u8>; NONCE_BUFFER_POOL_SIZE]>>>,
-    string_pool: Arc<Mutex<SmallVec<[String; NONCE_BUFFER_POOL_SIZE]>>>,
     stats: Arc<NonceStats>,
     last_cleanup: Arc<AtomicU64>,
 }
@@ -33,7 +32,6 @@ impl Clone for NonceGenerator {
         Self {
             length: AtomicUsize::new(self.length.load(Ordering::Relaxed)),
             buffer_pool: self.buffer_pool.clone(),
-            string_pool: self.string_pool.clone(),
             stats: self.stats.clone(),
             last_cleanup: self.last_cleanup.clone(),
         }
@@ -46,7 +44,6 @@ impl NonceGenerator {
         Self {
             length: AtomicUsize::new(length),
             buffer_pool: Arc::new(Mutex::new(SmallVec::new())),
-            string_pool: Arc::new(Mutex::new(SmallVec::new())),
             stats: Arc::new(NonceStats::default()),
             last_cleanup: Arc::new(AtomicU64::new(0)),
         }
@@ -86,7 +83,9 @@ impl NonceGenerator {
 
     #[inline]
     fn maybe_cleanup_pools(&self) {
-        let now = Instant::now().elapsed().as_secs();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_secs());
         let last_cleanup = self.last_cleanup.load(Ordering::Relaxed);
 
         if now.saturating_sub(last_cleanup) > 300 {
@@ -101,17 +100,9 @@ impl NonceGenerator {
     }
 
     fn cleanup_pools(&self) {
-        {
-            let mut buffer_pool = self.buffer_pool.lock();
-            buffer_pool.retain(|buf| buf.capacity() <= 1024);
-            buffer_pool.shrink_to_fit();
-        }
-
-        {
-            let mut string_pool = self.string_pool.lock();
-            string_pool.retain(|s| s.capacity() <= 256);
-            string_pool.shrink_to_fit();
-        }
+        let mut buffer_pool = self.buffer_pool.lock();
+        buffer_pool.retain(|buf| buf.capacity() <= 1024);
+        buffer_pool.shrink_to_fit();
     }
 
     #[inline]
@@ -142,7 +133,6 @@ impl NonceGenerator {
         Self {
             length: AtomicUsize::new(length),
             buffer_pool,
-            string_pool: Arc::new(Mutex::new(SmallVec::new())),
             stats: Arc::new(NonceStats::default()),
             last_cleanup: Arc::new(AtomicU64::new(0)),
         }
@@ -151,7 +141,7 @@ impl NonceGenerator {
 
 impl Default for NonceGenerator {
     fn default() -> Self {
-        Self::default()
+        Self::new(DEFAULT_NONCE_LENGTH)
     }
 }
 
