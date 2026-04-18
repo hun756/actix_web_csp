@@ -86,6 +86,12 @@ impl Directive {
     }
 
     pub fn validate(&self) -> Result<(), CspError> {
+        if self.name.is_empty() {
+            return Err(CspError::ValidationError(
+                "Directive name cannot be empty".to_string(),
+            ));
+        }
+
         if self.sources.len() > 1 && self.sources.iter().any(|s| s.is_none()) {
             return Err(CspError::ValidationError(format!(
                 "Directive '{}' contains 'none' with other sources",
@@ -93,7 +99,11 @@ impl Directive {
             )));
         }
 
-        for source in &self.sources {
+        for source in self
+            .sources
+            .iter()
+            .chain(self.fallback_sources.iter().flatten())
+        {
             match source {
                 Source::Host(host) if host.is_empty() => {
                     return Err(CspError::ValidationError(format!(
@@ -121,6 +131,9 @@ impl Directive {
                 }
                 _ => {}
             }
+
+            #[cfg(feature = "extended-validation")]
+            validate_source_semantics(&self.name, source)?;
         }
 
         Ok(())
@@ -159,6 +172,89 @@ impl Directive {
     pub fn contains_hash(&self) -> bool {
         self.sources.iter().any(|s| s.contains_hash())
     }
+}
+
+#[cfg(feature = "extended-validation")]
+fn validate_source_semantics(directive_name: &str, source: &Source) -> Result<(), CspError> {
+    match source {
+        Source::Host(host) => {
+            if host.chars().any(char::is_whitespace) {
+                return Err(CspError::ValidationError(format!(
+                    "Directive '{}' contains host whitespace: {}",
+                    directive_name, host
+                )));
+            }
+
+            if host.contains("://") {
+                return Err(CspError::ValidationError(format!(
+                    "Directive '{}' host should not include a scheme: {}",
+                    directive_name, host
+                )));
+            }
+
+            if host.starts_with('\'') || host.ends_with('\'') {
+                return Err(CspError::ValidationError(format!(
+                    "Directive '{}' host should use typed Source keywords instead of quoted values: {}",
+                    directive_name, host
+                )));
+            }
+
+            if host.contains(';') || host.contains(',') {
+                return Err(CspError::ValidationError(format!(
+                    "Directive '{}' host contains an invalid separator: {}",
+                    directive_name, host
+                )));
+            }
+        }
+        Source::Scheme(scheme) => {
+            let mut chars = scheme.chars();
+            let starts_correctly = chars
+                .next()
+                .map(|ch| ch.is_ascii_alphabetic())
+                .unwrap_or(false);
+            let rest_valid = chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '-' | '.'));
+
+            if !starts_correctly || !rest_valid || scheme.contains(':') {
+                return Err(CspError::ValidationError(format!(
+                    "Directive '{}' contains an invalid scheme: {}",
+                    directive_name, scheme
+                )));
+            }
+        }
+        Source::Nonce(nonce) => {
+            if nonce.chars().any(char::is_whitespace)
+                || nonce.contains('\'')
+                || !is_base64ish(nonce)
+            {
+                return Err(CspError::ValidationError(format!(
+                    "Directive '{}' contains an invalid nonce value",
+                    directive_name
+                )));
+            }
+        }
+        Source::Hash { value, .. } => {
+            if value.chars().any(char::is_whitespace)
+                || value.contains('\'')
+                || !is_base64ish(value)
+            {
+                return Err(CspError::ValidationError(format!(
+                    "Directive '{}' contains an invalid hash value",
+                    directive_name
+                )));
+            }
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "extended-validation")]
+fn is_base64ish(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '/' | '=' | '-' | '_'))
 }
 
 impl fmt::Display for Directive {

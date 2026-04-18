@@ -174,6 +174,18 @@ impl CspPolicy {
         for directive in self.directives.values() {
             directive.validate()?;
         }
+
+        #[cfg(feature = "extended-validation")]
+        {
+            if let Some(report_uri) = &self.report_uri {
+                validate_report_uri(report_uri)?;
+            }
+
+            if let Some(report_to) = &self.report_to {
+                validate_report_to(report_to)?;
+            }
+        }
+
         Ok(())
     }
 
@@ -273,6 +285,47 @@ impl CspPolicy {
 
         self
     }
+}
+
+#[cfg(feature = "extended-validation")]
+fn validate_report_uri(report_uri: &str) -> Result<(), CspError> {
+    if report_uri.trim().is_empty() || report_uri.chars().any(char::is_whitespace) {
+        return Err(CspError::InvalidReportUri(
+            "report-uri cannot be empty or contain whitespace".to_string(),
+        ));
+    }
+
+    if report_uri.starts_with('/') {
+        return Ok(());
+    }
+
+    let parsed = url::Url::parse(report_uri)
+        .map_err(|error| CspError::InvalidReportUri(format!("Invalid report-uri: {}", error)))?;
+
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err(CspError::InvalidReportUri(
+            "report-uri must use http, https, or a relative path".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "extended-validation")]
+fn validate_report_to(report_to: &str) -> Result<(), CspError> {
+    if report_to.trim().is_empty() || report_to.chars().any(char::is_whitespace) {
+        return Err(CspError::ValidationError(
+            "report-to endpoint cannot be empty or contain whitespace".to_string(),
+        ));
+    }
+
+    if report_to.contains(';') || report_to.contains(',') {
+        return Err(CspError::ValidationError(
+            "report-to endpoint contains an invalid separator".to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 impl Hash for CspPolicy {

@@ -251,4 +251,56 @@ mod tests {
         assert!(header_str.contains("default-src 'self'"));
         assert!(header_str.contains("script-src 'self' 'unsafe-inline'"));
     }
+
+    #[cfg(feature = "extended-validation")]
+    #[test]
+    fn test_extended_validation_rejects_host_with_scheme() {
+        let result = CspPolicyBuilder::new()
+            .script_src([Source::Host("https://cdn.example.com".into())])
+            .build();
+
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "extended-validation")]
+    #[test]
+    fn test_extended_validation_rejects_invalid_scheme() {
+        let result = CspPolicyBuilder::new()
+            .connect_src([Source::Scheme("https:".into())])
+            .build();
+
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "extended-validation")]
+    #[test]
+    fn test_extended_validation_rejects_invalid_nonce() {
+        let result = CspPolicyBuilder::new()
+            .script_src([Source::Nonce("bad nonce".into())])
+            .build();
+
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "extended-validation")]
+    #[test]
+    fn test_extended_validation_accepts_relative_report_uri() {
+        let result = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .report_uri("/csp-report")
+            .build();
+
+        assert!(result.is_ok());
+    }
+
+    #[cfg(feature = "extended-validation")]
+    #[test]
+    fn test_extended_validation_rejects_invalid_report_to() {
+        let result = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .report_to("bad endpoint")
+            .build();
+
+        assert!(result.is_err());
+    }
 }
