@@ -225,6 +225,7 @@ pub fn configure_csp(
     }
 }
 
+#[cfg(feature = "reporting")]
 pub fn configure_csp_with_reporting<F>(
     policy: crate::core::policy::CspPolicy,
     report_handler: F,
@@ -266,6 +267,18 @@ where
     }
 }
 
+#[cfg(not(feature = "reporting"))]
+pub fn configure_csp_with_reporting<F>(
+    _policy: crate::core::policy::CspPolicy,
+    _report_handler: F,
+) -> impl FnOnce(&mut actix_web::web::ServiceConfig)
+where
+    F: Fn(crate::monitoring::report::CspViolationReport) + Send + Sync + 'static,
+{
+    move |_cfg| {}
+}
+
+#[cfg(feature = "reporting")]
 pub fn csp_with_reporting<F>(
     policy: crate::core::policy::CspPolicy,
     report_handler: F,
@@ -279,4 +292,18 @@ where
     let middleware = csp_middleware(policy.clone());
     let configurator = configure_csp_with_reporting(policy, report_handler);
     (middleware, configurator)
+}
+
+#[cfg(not(feature = "reporting"))]
+pub fn csp_with_reporting<F>(
+    policy: crate::core::policy::CspPolicy,
+    _report_handler: F,
+) -> (
+    CspMiddleware,
+    impl FnOnce(&mut actix_web::web::ServiceConfig),
+)
+where
+    F: Fn(crate::monitoring::report::CspViolationReport) + Send + Sync + 'static,
+{
+    (csp_middleware(policy), move |_cfg| {})
 }

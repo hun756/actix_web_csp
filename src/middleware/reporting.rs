@@ -4,17 +4,17 @@ use crate::monitoring::report::CspViolationReport;
 use actix_web::{
     body::EitherBody,
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    error::ErrorBadRequest,
-    http::Method,
-    web::{self},
-    Error, FromRequest, HttpResponse,
+    Error,
 };
+#[cfg(feature = "reporting")]
+use actix_web::{error::ErrorBadRequest, http::Method, web::{self}, FromRequest, HttpResponse};
 use futures::{
     future::{ready, Ready},
     Future,
 };
-use log;
 use std::{borrow::Cow, pin::Pin, sync::Arc};
+#[cfg(feature = "reporting")]
+use log;
 
 pub(crate) type ViolationHandler = Arc<dyn Fn(CspViolationReport) + Send + Sync + 'static>;
 
@@ -85,6 +85,7 @@ where
     }
 }
 
+#[cfg_attr(not(feature = "reporting"), allow(dead_code))]
 pub struct CspReportingMiddlewareService<S> {
     service: S,
     handler: ViolationHandler,
@@ -106,6 +107,16 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
+        #[cfg(not(feature = "reporting"))]
+        {
+            let service = self.service.clone();
+            return Box::pin(async move {
+                let res = service.call(req).await?;
+                Ok(res.map_into_left_body())
+            });
+        }
+
+        #[cfg(feature = "reporting")]
         if req.path() == self.report_path && req.method() == &Method::POST {
             let handler = self.handler.clone();
             let max_size = self.max_report_size;
@@ -133,6 +144,7 @@ where
     }
 }
 
+#[cfg(feature = "reporting")]
 #[inline]
 pub(crate) fn process_violation_report(
     bytes: &[u8],
@@ -148,6 +160,7 @@ pub(crate) fn process_violation_report(
     }
 }
 
+#[cfg(feature = "reporting")]
 pub(crate) fn process_violation_bytes(
     bytes: &[u8],
     max_size: usize,
@@ -171,6 +184,17 @@ pub(crate) fn process_violation_bytes(
         }
     }
 
+    Ok(())
+}
+
+#[cfg(not(feature = "reporting"))]
+#[allow(dead_code)]
+pub(crate) fn process_violation_bytes(
+    _bytes: &[u8],
+    _max_size: usize,
+    _stats: &crate::monitoring::stats::CspStats,
+    _handler: &ViolationHandler,
+) -> Result<(), Error> {
     Ok(())
 }
 

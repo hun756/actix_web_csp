@@ -1,6 +1,9 @@
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+#[cfg(feature = "stats")]
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
+#[cfg(feature = "stats")]
 #[derive(Debug)]
 pub struct PerformanceMetrics {
     header_generation_samples: AtomicUsize,
@@ -18,6 +21,7 @@ pub struct PerformanceMetrics {
     gc_events: AtomicUsize,
 }
 
+#[cfg(feature = "stats")]
 impl Default for PerformanceMetrics {
     fn default() -> Self {
         Self {
@@ -38,6 +42,7 @@ impl Default for PerformanceMetrics {
     }
 }
 
+#[cfg(feature = "stats")]
 impl PerformanceMetrics {
     pub fn new() -> Self {
         Self::default()
@@ -154,6 +159,47 @@ impl PerformanceMetrics {
         self.memory_pressure_events.store(0, Ordering::Relaxed);
         self.gc_events.store(0, Ordering::Relaxed);
     }
+}
+
+#[cfg(not(feature = "stats"))]
+#[derive(Debug, Default)]
+pub struct PerformanceMetrics;
+
+#[cfg(not(feature = "stats"))]
+impl PerformanceMetrics {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn record_header_generation(&self, _duration: Duration) {}
+
+    pub fn record_policy_hash(&self, _duration: Duration) {}
+
+    pub fn record_cache_hit(&self) {}
+
+    pub fn record_cache_miss(&self) {}
+
+    pub fn avg_header_generation_ns(&self) -> f64 {
+        0.0
+    }
+
+    pub fn avg_policy_hash_ns(&self) -> f64 {
+        0.0
+    }
+
+    pub fn cache_hit_rate(&self) -> f64 {
+        0.0
+    }
+
+    pub fn min_header_generation_ns(&self) -> u64 {
+        0
+    }
+
+    pub fn max_header_generation_ns(&self) -> u64 {
+        0
+    }
+
+    pub fn reset(&self) {}
 }
 
 #[derive(Debug)]
