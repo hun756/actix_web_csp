@@ -295,8 +295,64 @@ mod tests {
         let mut verifier = PolicyVerifier::new(policy);
 
         for index in 0..300 {
-            let uri = format!("https://blocked{}.example.com/script.js", index);
+            let uri = format!("https://blocked{index}.example.com/script.js");
             assert!(!verifier.verify_uri(&uri, "script-src").unwrap());
         }
+    }
+
+    #[test]
+    fn test_verify_uri_matches_host_source_with_port_and_path_prefix() {
+        let policy = CspPolicyBuilder::new()
+            .script_src([Source::Host(Cow::Borrowed("cdn.example.com:8443/assets/"))])
+            .build_unchecked();
+
+        let mut verifier = PolicyVerifier::new(policy);
+
+        assert!(verifier
+            .verify_uri("https://cdn.example.com:8443/assets/app.js", "script-src")
+            .unwrap());
+        assert!(!verifier
+            .verify_uri("https://cdn.example.com:9443/assets/app.js", "script-src")
+            .unwrap());
+        assert!(!verifier
+            .verify_uri("https://cdn.example.com:8443/other/app.js", "script-src")
+            .unwrap());
+    }
+
+    #[test]
+    fn test_verify_uri_blocks_host_allowlists_when_strict_dynamic_is_present() {
+        let policy = CspPolicyBuilder::new()
+            .script_src([
+                Source::StrictDynamic,
+                Source::Nonce(Cow::Borrowed("nonce123")),
+                Source::Host(Cow::Borrowed("cdn.example.com")),
+            ])
+            .build_unchecked();
+
+        let mut verifier = PolicyVerifier::new(policy);
+
+        assert!(!verifier
+            .verify_uri("https://cdn.example.com/app.js", "script-src")
+            .unwrap());
+    }
+
+    #[test]
+    fn test_verify_inline_script_ignores_unsafe_inline_when_strict_dynamic_uses_nonce() {
+        let policy = CspPolicyBuilder::new()
+            .script_src([
+                Source::StrictDynamic,
+                Source::UnsafeInline,
+                Source::Nonce(Cow::Borrowed("nonce123")),
+            ])
+            .build_unchecked();
+
+        let verifier = PolicyVerifier::new(policy);
+
+        assert!(!verifier
+            .verify_inline_script(b"console.log('no nonce');", None)
+            .unwrap());
+        assert!(verifier
+            .verify_inline_script(b"console.log('with nonce');", Some("nonce123"))
+            .unwrap());
     }
 }

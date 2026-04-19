@@ -1,10 +1,9 @@
 use crate::constants::{
     DEFAULT_BUFFER_CAPACITY, DEFAULT_CACHE_DURATION_SECS, HEADER_CSP, HEADER_CSP_REPORT_ONLY,
-    REPORT_TO, REPORT_URI, SCRIPT_SRC, SCRIPT_SRC_ELEM, SEMICOLON_SPACE, STYLE_SRC,
-    STYLE_SRC_ELEM,
+    REPORT_TO, REPORT_URI, SCRIPT_SRC, SCRIPT_SRC_ELEM, SEMICOLON_SPACE, STYLE_SRC, STYLE_SRC_ELEM,
 };
-use crate::core::interop::PolicyDocument;
 use crate::core::directives::{Directive, DirectiveSpec, Sandbox};
+use crate::core::interop::PolicyDocument;
 use crate::core::source::Source;
 use crate::error::CspError;
 use crate::utils::{BufferWriter, BytesCache, CachedValue};
@@ -381,7 +380,7 @@ fn validate_report_uri(report_uri: &str) -> Result<(), CspError> {
     }
 
     let parsed = url::Url::parse(report_uri)
-        .map_err(|error| CspError::InvalidReportUri(format!("Invalid report-uri: {}", error)))?;
+        .map_err(|error| CspError::InvalidReportUri(format!("Invalid report-uri: {error}")))?;
 
     if !matches!(parsed.scheme(), "http" | "https") {
         return Err(CspError::InvalidReportUri(
@@ -430,7 +429,7 @@ impl fmt::Display for CspPolicy {
             if !first {
                 f.write_str("; ")?;
             }
-            write!(f, "{}", directive)?;
+            write!(f, "{directive}")?;
             first = false;
         }
 
@@ -438,7 +437,7 @@ impl fmt::Display for CspPolicy {
             if !first {
                 f.write_str("; ")?;
             }
-            write!(f, "{} {}", REPORT_URI, report_uri)?;
+            write!(f, "{REPORT_URI} {report_uri}")?;
             first = false;
         }
 
@@ -446,7 +445,7 @@ impl fmt::Display for CspPolicy {
             if !first {
                 f.write_str("; ")?;
             }
-            write!(f, "{} {}", REPORT_TO, report_to)?;
+            write!(f, "{REPORT_TO} {report_to}")?;
         }
 
         Ok(())

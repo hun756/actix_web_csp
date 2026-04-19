@@ -748,7 +748,7 @@ async fn attack_page() -> Result<HttpResponse> {
 }
 
 async fn api_cart(data: web::Json<serde_json::Value>) -> Result<HttpResponse> {
-    println!("Cart API called: {:?}", data);
+    println!("Cart API called: {data:?}");
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "status": "success",
         "message": "Cart updated"

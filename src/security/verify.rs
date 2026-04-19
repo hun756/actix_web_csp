@@ -5,7 +5,6 @@ use crate::error::CspError;
 mod imp {
     use super::*;
     use crate::core::source::Source;
-    use rustc_hash::FxHashSet;
     use std::collections::HashMap;
     use url::Url;
 
@@ -13,7 +12,6 @@ mod imp {
         policy: CspPolicy,
         origin: Option<Url>,
         url_cache: HashMap<String, Url>,
-        host_cache: FxHashSet<String>,
         verification_cache: lru::LruCache<u64, bool>,
     }
 
@@ -24,17 +22,11 @@ mod imp {
                 policy,
                 origin: None,
                 url_cache: HashMap::with_capacity(256),
-                host_cache: FxHashSet::with_capacity_and_hasher(128, Default::default()),
-                verification_cache: lru::LruCache::new(
-                    std::num::NonZeroUsize::new(512).unwrap(),
-                ),
+                verification_cache: lru::LruCache::new(std::num::NonZeroUsize::new(512).unwrap()),
             }
         }
 
-        pub fn with_origin(
-            policy: CspPolicy,
-            origin: impl AsRef<str>,
-        ) -> Result<Self, CspError> {
+        pub fn with_origin(policy: CspPolicy, origin: impl AsRef<str>) -> Result<Self, CspError> {
             let mut verifier = Self::new(policy);
             verifier.set_origin(origin)?;
             Ok(verifier)
@@ -92,20 +84,36 @@ mod imp {
                     Err(_) => {
                         let result = false;
                         self.verification_cache.put(cache_key, result);
-                        return Err(CspError::VerificationError(format!("Invalid URI: {}", uri)));
+                        return Err(CspError::VerificationError(format!("Invalid URI: {uri}")));
                     }
                 }
             };
 
-            let sources = directive.sources();
+            let sources = directive
+                .sources()
+                .iter()
+                .chain(directive.fallback_sources().into_iter().flatten())
+                .collect::<Vec<_>>();
             if sources.iter().any(|s| s.is_none()) {
                 let result = false;
                 self.verification_cache.put(cache_key, result);
                 return Ok(result);
             }
 
+            if directive_name.starts_with("script-src")
+                && sources
+                    .iter()
+                    .any(|source| matches!(source, Source::StrictDynamic))
+                && sources
+                    .iter()
+                    .any(|source| source.contains_nonce() || source.contains_hash())
+            {
+                let result = false;
+                self.verification_cache.put(cache_key, result);
+                return Ok(result);
+            }
+
             let uri_scheme = parsed_url.scheme();
-            let uri_host = parsed_url.host_str();
 
             for source in sources {
                 match source {
@@ -122,21 +130,10 @@ mod imp {
                         }
                     }
                     Source::Host(host) => {
-                        if let Some(host_str) = uri_host {
-                            if host_str == host.as_ref() {
-                                let result = true;
-                                self.verification_cache.put(cache_key, result);
-                                return Ok(result);
-                            } else if let Some(domain) = host.strip_prefix("*.") {
-                                if host_str.ends_with(domain) {
-                                    let domain_with_dot = format!(".{}", domain);
-                                    if host_str.ends_with(&domain_with_dot) || host_str == domain {
-                                        let result = true;
-                                        self.verification_cache.put(cache_key, result);
-                                        return Ok(result);
-                                    }
-                                }
-                            }
+                        if self.match_host_source(&parsed_url, host) {
+                            let result = true;
+                            self.verification_cache.put(cache_key, result);
+                            return Ok(result);
                         }
                     }
                     Source::Scheme(scheme) => {
@@ -223,7 +220,29 @@ mod imp {
         }
 
         #[inline]
-        #[allow(dead_code)]
+        fn match_host_source(&self, url: &Url, source: &str) -> bool {
+            let (host_part, path_part) = split_host_source(source);
+            let (host_pattern, expected_port) = split_host_port(host_part);
+
+            if !self.match_host(url, host_pattern) {
+                return false;
+            }
+
+            if let Some(expected_port) = expected_port {
+                let actual_port = url.port_or_known_default();
+                if expected_port != "*" && actual_port != expected_port.parse::<u16>().ok() {
+                    return false;
+                }
+            }
+
+            if let Some(path_part) = path_part {
+                return url.path().starts_with(path_part);
+            }
+
+            true
+        }
+
+        #[inline]
         fn match_host(&self, url: &Url, host: &str) -> bool {
             let url_host = match url.host_str() {
                 Some(h) => h,
@@ -234,13 +253,10 @@ mod imp {
                 return true;
             }
 
-            if host.starts_with("*.") {
-                let domain = &host[2..];
+            if let Some(domain) = host.strip_prefix("*.") {
                 if url_host.len() > domain.len() && url_host.ends_with(domain) {
-                    let prefix_len = url_host.len() - domain.len();
-                    let prefix = &url_host[..prefix_len];
-
-                    return !prefix.contains('.') && prefix.ends_with('.');
+                    let split_index = url_host.len() - domain.len() - 1;
+                    return url_host.as_bytes().get(split_index) == Some(&b'.');
                 }
             }
 
@@ -259,7 +275,6 @@ mod imp {
 
         pub fn clear_caches(&mut self) {
             self.url_cache.clear();
-            self.host_cache.clear();
             self.verification_cache.clear();
         }
 
@@ -281,7 +296,17 @@ mod imp {
                     return Ok(false);
                 }
 
-                if directive.sources().iter().any(|s| s.is_unsafe_inline()) {
+                let allows_unsafe_inline = directive.sources().iter().any(|s| s.is_unsafe_inline())
+                    && !directive
+                        .sources()
+                        .iter()
+                        .any(|s| matches!(s, Source::StrictDynamic))
+                    && !directive
+                        .sources()
+                        .iter()
+                        .any(|s| s.contains_nonce() || s.contains_hash());
+
+                if allows_unsafe_inline {
                     return Ok(true);
                 }
 
@@ -331,7 +356,17 @@ mod imp {
                     return Ok(false);
                 }
 
-                if directive.sources().iter().any(|s| s.is_unsafe_inline()) {
+                let allows_unsafe_inline = directive.sources().iter().any(|s| s.is_unsafe_inline())
+                    && !directive
+                        .sources()
+                        .iter()
+                        .any(|s| matches!(s, Source::StrictDynamic))
+                    && !directive
+                        .sources()
+                        .iter()
+                        .any(|s| s.contains_nonce() || s.contains_hash());
+
+                if allows_unsafe_inline {
                     return Ok(true);
                 }
 
@@ -401,6 +436,26 @@ mod imp {
             self.policy.get_directive(directive_name).is_some()
         }
     }
+
+    fn split_host_source(source: &str) -> (&str, Option<&str>) {
+        match source.find('/') {
+            Some(index) => (&source[..index], Some(&source[index..])),
+            None => (source, None),
+        }
+    }
+
+    fn split_host_port(host: &str) -> (&str, Option<&str>) {
+        if let Some(index) = host.rfind(':') {
+            let port_candidate = &host[index + 1..];
+            if !port_candidate.is_empty()
+                && (port_candidate == "*" || port_candidate.chars().all(|ch| ch.is_ascii_digit()))
+            {
+                return (&host[..index], Some(port_candidate));
+            }
+        }
+
+        (host, None)
+    }
 }
 
 #[cfg(not(feature = "verify"))]
@@ -417,10 +472,7 @@ mod imp {
             Self { policy }
         }
 
-        pub fn with_origin(
-            policy: CspPolicy,
-            _origin: impl AsRef<str>,
-        ) -> Result<Self, CspError> {
+        pub fn with_origin(policy: CspPolicy, _origin: impl AsRef<str>) -> Result<Self, CspError> {
             Ok(Self::new(policy))
         }
 
@@ -442,11 +494,7 @@ mod imp {
         pub fn clear_caches(&mut self) {}
 
         #[inline]
-        pub fn verify_uri(
-            &mut self,
-            _uri: &str,
-            _directive_name: &str,
-        ) -> Result<bool, CspError> {
+        pub fn verify_uri(&mut self, _uri: &str, _directive_name: &str) -> Result<bool, CspError> {
             Err(CspError::ConfigError(
                 "Policy verification is disabled. Rebuild with the `verify` feature enabled."
                     .to_string(),
@@ -466,11 +514,7 @@ mod imp {
         }
 
         #[inline]
-        pub fn verify_nonce(
-            &self,
-            _nonce: &str,
-            _directive_name: &str,
-        ) -> Result<bool, CspError> {
+        pub fn verify_nonce(&self, _nonce: &str, _directive_name: &str) -> Result<bool, CspError> {
             Err(CspError::ConfigError(
                 "Nonce verification is disabled. Rebuild with the `verify` feature enabled."
                     .to_string(),

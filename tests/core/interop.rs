@@ -65,6 +65,9 @@ mod tests {
         let policy = CspPolicy::from_document(document).unwrap();
         let directive = policy.get_directive("script-src").unwrap();
 
-        assert_eq!(directive.fallback_sources().unwrap()[0].to_string(), "https:");
+        assert_eq!(
+            directive.fallback_sources().unwrap()[0].to_string(),
+            "https:"
+        );
     }
 }

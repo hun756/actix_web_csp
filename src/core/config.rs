@@ -11,9 +11,9 @@
 //! The configuration system is built around two primary components:
 //!
 //! - [`CspConfig`] - The main configuration container that manages policy
-//! state, caching, and monitoring
+//!   state, caching, and monitoring
 //! - [`CspConfigBuilder`] - A fluent builder interface for constructing
-//! configurations with custom settings
+//!   configurations with custom settings
 //!
 //!
 //! ## Usage Patterns
@@ -132,9 +132,7 @@
 //! });
 //! ```
 
-use crate::constants::{
-    DEFAULT_POLICY_CACHE_ENTRIES, DEFAULT_REQUEST_NONCE_CACHE_ENTRIES,
-};
+use crate::constants::{DEFAULT_POLICY_CACHE_ENTRIES, DEFAULT_REQUEST_NONCE_CACHE_ENTRIES};
 use crate::core::directives::DirectiveSpec;
 use crate::core::policy::{CompiledCspPolicy, CspPolicy};
 use crate::monitoring::perf::PerformanceMetrics;
@@ -166,11 +164,11 @@ type UpdateFn = Box<dyn Fn(&mut CspPolicy) + Send + Sync + 'static>;
 /// # Features
 ///
 /// - **Thread-safe policy management** - Concurrent read/write access using
-/// RwLock
+///   `RwLock`
 /// - **Nonce generation** - Optional cryptographic nonce generation for inline
-/// content
+///   content
 /// - **Policy caching** - LRU cache for compiled policies to improve
-/// performance
+///   performance
 /// - **Real-time monitoring** - Built-in statistics and performance metrics
 /// - **Update listeners** - Callbacks for policy change notifications
 ///
@@ -604,14 +602,14 @@ impl CspConfig {
     pub fn with_default_directives(self) -> Self {
         {
             let mut policy = self.policy.write();
-            if !policy.get_directive("default-src").is_some() {
+            if policy.get_directive("default-src").is_none() {
                 use crate::core::directives::DefaultSrc;
                 use crate::core::source::Source;
                 let directive = DefaultSrc::new().add_source(Source::Self_).build();
                 policy.add_directive(directive);
             }
 
-            if !policy.get_directive("object-src").is_some() {
+            if policy.get_directive("object-src").is_none() {
                 use crate::core::directives::ObjectSrc;
                 use crate::core::source::Source;
                 let directive = ObjectSrc::new().add_source(Source::None).build();

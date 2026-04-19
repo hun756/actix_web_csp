@@ -50,7 +50,11 @@ impl CspPreset {
             Self::SinglePageApp => CspPolicyBuilder::new()
                 .default_src([Source::Self_])
                 .script_src([Source::Self_, Source::Scheme("https".into())])
-                .style_src([Source::Self_, Source::UnsafeInline, Source::Scheme("https".into())])
+                .style_src([
+                    Source::Self_,
+                    Source::UnsafeInline,
+                    Source::Scheme("https".into()),
+                ])
                 .img_src([
                     Source::Self_,
                     Source::Scheme("data".into()),
@@ -137,8 +141,7 @@ impl FromStr for CspPreset {
             "dashboard" => Ok(Self::Dashboard),
             "payments" | "payment" => Ok(Self::Payments),
             other => Err(CspError::ConfigError(format!(
-                "Unknown CSP preset '{}'",
-                other
+                "Unknown CSP preset '{other}'"
             ))),
         }
     }

@@ -178,7 +178,11 @@ mod imp {
             writeln!(f, "CSP Middleware Statistics:")?;
             writeln!(f, "  Uptime: {} seconds", self.uptime_secs())?;
             writeln!(f, "  Requests processed: {}", self.request_count())?;
-            writeln!(f, "  Requests per second: {:.2}", self.requests_per_second())?;
+            writeln!(
+                f,
+                "  Requests per second: {:.2}",
+                self.requests_per_second()
+            )?;
             writeln!(f, "  Nonces generated: {}", self.nonce_generation_count())?;
             writeln!(f, "  Policy updates: {}", self.policy_update_count())?;
             writeln!(f, "  Policy validations: {}", self.policy_validations())?;

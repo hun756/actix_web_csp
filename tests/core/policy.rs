@@ -264,7 +264,11 @@ mod tests {
             compiled.header_name(),
             &HeaderName::from_static("content-security-policy")
         );
-        assert!(compiled.header_value().to_str().unwrap().contains("report-uri /csp-report"));
+        assert!(compiled
+            .header_value()
+            .to_str()
+            .unwrap()
+            .contains("report-uri /csp-report"));
     }
 
     #[test]

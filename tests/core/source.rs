@@ -12,7 +12,7 @@ mod tests {
         let source_self = Source::Self_;
         let source_unsafe_inline = Source::UnsafeInline;
         let source_unsafe_eval = Source::UnsafeEval;
-        
+
         assert!(source_none.is_none());
         assert!(source_self.is_self());
         assert!(source_unsafe_inline.is_unsafe_inline());
@@ -38,7 +38,7 @@ mod tests {
     fn test_source_nonce() {
         let nonce_value = "abc123";
         let nonce_source = Source::Nonce(Cow::Borrowed(nonce_value));
-        
+
         assert!(nonce_source.contains_nonce());
         assert_eq!(nonce_source.nonce(), Some(nonce_value));
         assert!(nonce_source.to_string().contains(nonce_value));
@@ -51,9 +51,12 @@ mod tests {
             algorithm: HashAlgorithm::Sha256,
             value: Cow::Borrowed(hash_value),
         };
-        
+
         assert!(hash_source.contains_hash());
-        assert_eq!(hash_source.hash_value(), Some((hash_value, HashAlgorithm::Sha256)));
+        assert_eq!(
+            hash_source.hash_value(),
+            Some((hash_value, HashAlgorithm::Sha256))
+        );
     }
 
     #[test]
@@ -63,7 +66,7 @@ mod tests {
         assert_eq!(Source::UnsafeInline.to_string(), "'unsafe-inline'");
         assert_eq!(Source::UnsafeEval.to_string(), "'unsafe-eval'");
         assert_eq!(Source::StrictDynamic.to_string(), "'strict-dynamic'");
-        
+
         let host_source = Source::Host(Cow::Borrowed("example.com"));
         assert_eq!(host_source.to_string(), "example.com");
     }
@@ -72,10 +75,10 @@ mod tests {
     fn test_source_estimated_size() {
         let none_source = Source::None;
         assert!(none_source.estimated_size() > 0);
-        
+
         let host_source = Source::Host(Cow::Borrowed("example.com"));
         assert_eq!(host_source.estimated_size(), "example.com".len());
-        
+
         let nonce_source = Source::Nonce(Cow::Borrowed("abc123"));
         assert!(nonce_source.estimated_size() > "abc123".len());
     }
@@ -85,14 +88,14 @@ mod tests {
         let source1 = Source::Self_;
         let source2 = Source::Self_;
         let source3 = Source::None;
-        
+
         assert_eq!(source1, source2);
         assert_ne!(source1, source3);
-        
+
         let host1 = Source::Host(Cow::Borrowed("example.com"));
         let host2 = Source::Host(Cow::Borrowed("example.com"));
         let host3 = Source::Host(Cow::Borrowed("other.com"));
-        
+
         assert_eq!(host1, host2);
         assert_ne!(host1, host3);
     }
@@ -101,8 +104,11 @@ mod tests {
     fn test_source_as_static_str() {
         assert_eq!(Source::None.as_static_str(), Some("'none'"));
         assert_eq!(Source::Self_.as_static_str(), Some("'self'"));
-        assert_eq!(Source::UnsafeInline.as_static_str(), Some("'unsafe-inline'"));
-        
+        assert_eq!(
+            Source::UnsafeInline.as_static_str(),
+            Some("'unsafe-inline'")
+        );
+
         let host_source = Source::Host(Cow::Borrowed("example.com"));
         assert_eq!(host_source.as_static_str(), None);
     }
@@ -110,7 +116,10 @@ mod tests {
     #[test]
     fn test_source_from_str_parses_keywords_and_nonce() {
         assert_eq!("'self'".parse::<Source>().unwrap(), Source::Self_);
-        assert_eq!("https:".parse::<Source>().unwrap(), Source::Scheme("https".into()));
+        assert_eq!(
+            "https:".parse::<Source>().unwrap(),
+            Source::Scheme("https".into())
+        );
         assert_eq!(
             "'nonce-abc123'".parse::<Source>().unwrap(),
             Source::Nonce("abc123".into())

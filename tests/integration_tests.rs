@@ -147,7 +147,7 @@ mod integration_tests {
         let response_nonce = test::read_body(resp).await;
         let response_nonce = String::from_utf8(response_nonce.to_vec()).unwrap();
 
-        assert!(csp_value.contains(&format!("'nonce-{}'", response_nonce)));
+        assert!(csp_value.contains(&format!("'nonce-{response_nonce}'")));
         assert_ne!(nonce, response_nonce);
     }
 
@@ -175,7 +175,7 @@ mod integration_tests {
         let nonce = String::from_utf8(body.to_vec()).unwrap();
 
         assert!(!nonce.is_empty());
-        assert!(csp_value.contains(&format!("'nonce-{}'", nonce)));
+        assert!(csp_value.contains(&format!("'nonce-{nonce}'")));
     }
 
     #[actix_web::test]
@@ -385,7 +385,7 @@ mod integration_tests {
         let mut policy_builder = CspPolicyBuilder::new().default_src([Source::Self_]);
 
         let hosts: Vec<Source> = (0..100)
-            .map(|i| Source::Host(format!("host{}.example.com", i).into()))
+            .map(|i| Source::Host(format!("host{i}.example.com").into()))
             .collect();
 
         policy_builder = policy_builder.script_src(hosts.clone());
@@ -411,11 +411,7 @@ mod integration_tests {
         }
 
         let duration = start.elapsed();
-        println!("Time elapsed for 100 requests: {:?}", duration);
-        assert!(
-            duration.as_secs() < 1,
-            "Performance too low: {:?}",
-            duration
-        );
+        println!("Time elapsed for 100 requests: {duration:?}");
+        assert!(duration.as_secs() < 1, "Performance too low: {duration:?}");
     }
 }

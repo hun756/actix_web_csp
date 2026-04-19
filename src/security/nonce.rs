@@ -88,14 +88,13 @@ impl NonceGenerator {
             .map_or(0, |duration| duration.as_secs());
         let last_cleanup = self.last_cleanup.load(Ordering::Relaxed);
 
-        if now.saturating_sub(last_cleanup) > 300 {
-            if self
+        if now.saturating_sub(last_cleanup) > 300
+            && self
                 .last_cleanup
                 .compare_exchange_weak(last_cleanup, now, Ordering::Relaxed, Ordering::Relaxed)
                 .is_ok()
-            {
-                self.cleanup_pools();
-            }
+        {
+            self.cleanup_pools();
         }
     }
 
@@ -116,7 +115,7 @@ impl NonceGenerator {
     }
 
     #[inline]
-    pub fn default() -> Self {
+    pub fn with_default_length() -> Self {
         Self::new(DEFAULT_NONCE_LENGTH)
     }
 

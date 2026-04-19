@@ -320,7 +320,7 @@ impl CompactString {
     }
 
     #[inline]
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_slice(s: &str) -> Self {
         let mut data = SmallVec::new();
         data.extend_from_slice(s.as_bytes());
         Self { data }
@@ -328,7 +328,7 @@ impl CompactString {
 
     #[inline]
     pub fn from_static(s: &'static str) -> Self {
-        Self::from_str(s)
+        Self::from_slice(s)
     }
 
     #[inline]

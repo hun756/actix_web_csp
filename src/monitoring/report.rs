@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct CspViolationReport {
     #[serde(rename = "document-uri")]
     pub document_uri: String,
@@ -113,24 +113,5 @@ impl TryFrom<&serde_json::Value> for CspViolationReport {
 
     fn try_from(value: &serde_json::Value) -> Result<Self, Self::Error> {
         serde_json::from_value(value.clone())
-    }
-}
-
-impl Default for CspViolationReport {
-    fn default() -> Self {
-        Self {
-            document_uri: String::new(),
-            referrer: String::new(),
-            blocked_uri: String::new(),
-            violated_directive: String::new(),
-            effective_directive: String::new(),
-            original_policy: String::new(),
-            disposition: String::new(),
-            source_file: None,
-            line_number: None,
-            column_number: None,
-            status_code: None,
-            script_sample: None,
-        }
     }
 }

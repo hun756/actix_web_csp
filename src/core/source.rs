@@ -166,8 +166,8 @@ impl fmt::Display for Source {
             Source::WasmUnsafeEval => f.write_str(WASM_UNSAFE_EVAL_SOURCE),
             Source::UnsafeHashes => f.write_str(UNSAFE_HASHES_SOURCE),
             Source::Host(host) => f.write_str(host),
-            Source::Scheme(scheme) => write!(f, "{}:", scheme),
-            Source::Nonce(nonce) => write!(f, "{}{}{}", NONCE_PREFIX, nonce, SUFFIX_QUOTE),
+            Source::Scheme(scheme) => write!(f, "{scheme}:"),
+            Source::Nonce(nonce) => write!(f, "{NONCE_PREFIX}{nonce}{SUFFIX_QUOTE}"),
             Source::Hash { algorithm, value } => {
                 write!(f, "{}{}{}", algorithm.prefix(), value, SUFFIX_QUOTE)
             }
@@ -285,8 +285,7 @@ fn parse_hash_source(
 
     if value.starts_with("'sha") && value.ends_with(SUFFIX_QUOTE) {
         return Err(crate::error::CspError::InvalidDirectiveValue(format!(
-            "Unsupported hash source: {}",
-            value
+            "Unsupported hash source: {value}"
         )));
     }
 

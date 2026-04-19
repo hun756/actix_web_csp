@@ -67,7 +67,11 @@ impl From<&Directive> for DirectiveDocument {
     fn from(directive: &Directive) -> Self {
         Self {
             name: directive.name().to_owned(),
-            sources: directive.sources().iter().map(ToString::to_string).collect(),
+            sources: directive
+                .sources()
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
             fallback_sources: directive
                 .fallback_sources()
                 .into_iter()

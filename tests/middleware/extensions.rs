@@ -1,4 +1,4 @@
-use actix_web_csp::{security::HashAlgorithm};
+use actix_web_csp::security::HashAlgorithm;
 
 #[cfg(test)]
 mod tests {

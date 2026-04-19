@@ -157,8 +157,7 @@ mod tests {
         for &common_str in &common_strings {
             assert!(
                 intern_string(common_str).is_some(),
-                "String '{}' should be interned",
-                common_str
+                "String '{common_str}' should be interned"
             );
         }
     }

@@ -1,6 +1,4 @@
-use actix_web_csp::{
-    CspPolicyBuilder, Source
-};
+use actix_web_csp::{CspPolicyBuilder, Source};
 use std::borrow::Cow;
 
 fn main() {

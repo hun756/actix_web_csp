@@ -37,7 +37,7 @@ mod tests {
         let nonce = config.generate_nonce();
         assert!(nonce.is_some());
         let nonce_str = nonce.unwrap();
-        assert!(nonce_str.len() > 0);
+        assert!(!nonce_str.is_empty());
     }
 
     #[test]
@@ -50,7 +50,7 @@ mod tests {
         let nonce = config.generate_nonce();
         assert!(nonce.is_some());
         let nonce_str = nonce.unwrap();
-        assert!(nonce_str.len() > 0);
+        assert!(!nonce_str.is_empty());
     }
 
     #[test]
@@ -137,13 +137,11 @@ mod tests {
         let config = CspConfig::new(policy);
 
         let compiled = config.compiled_policy().unwrap();
-        assert!(
-            compiled
-                .header_value()
-                .to_str()
-                .unwrap()
-                .contains("default-src 'self'")
-        );
+        assert!(compiled
+            .header_value()
+            .to_str()
+            .unwrap()
+            .contains("default-src 'self'"));
     }
 
     #[test]

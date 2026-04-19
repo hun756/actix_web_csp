@@ -269,7 +269,10 @@ fn benchmark_policy_interop(c: &mut Criterion) {
 
     let policy = CspPolicyBuilder::new()
         .default_src([Source::Self_])
-        .script_src([Source::Self_, Source::Host(Cow::Borrowed("cdn.example.com"))])
+        .script_src([
+            Source::Self_,
+            Source::Host(Cow::Borrowed("cdn.example.com")),
+        ])
         .connect_src([Source::Self_, Source::Scheme(Cow::Borrowed("https"))])
         .report_uri("/csp-report")
         .build_unchecked();
@@ -277,7 +280,8 @@ fn benchmark_policy_interop(c: &mut Criterion) {
 
     group.bench_function("json_round_trip", |b| {
         b.iter(|| {
-            let policy = black_box(actix_web_csp::CspPolicy::from_json_str(black_box(&json)).unwrap());
+            let policy =
+                black_box(actix_web_csp::CspPolicy::from_json_str(black_box(&json)).unwrap());
             black_box(policy.to_json_string().unwrap())
         })
     });

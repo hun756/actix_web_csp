@@ -7,14 +7,19 @@ use actix_web::{
     Error,
 };
 #[cfg(feature = "reporting")]
-use actix_web::{error::ErrorBadRequest, http::Method, web::{self}, FromRequest, HttpResponse};
+use actix_web::{
+    error::ErrorBadRequest,
+    http::Method,
+    web::{self},
+    FromRequest, HttpResponse,
+};
 use futures::{
     future::{ready, Ready},
     Future,
 };
-use std::{borrow::Cow, pin::Pin, sync::Arc};
 #[cfg(feature = "reporting")]
 use log;
+use std::{borrow::Cow, pin::Pin, sync::Arc};
 
 pub(crate) type ViolationHandler = Arc<dyn Fn(CspViolationReport) + Send + Sync + 'static>;
 
@@ -117,7 +122,7 @@ where
         }
 
         #[cfg(feature = "reporting")]
-        if req.path() == self.report_path && req.method() == &Method::POST {
+        if req.path() == self.report_path && req.method() == Method::POST {
             let handler = self.handler.clone();
             let max_size = self.max_report_size;
             let stats = self.stats.clone();
@@ -126,7 +131,7 @@ where
                 let (http_req, mut payload) = req.into_parts();
                 let body = match web::Bytes::from_request(&http_req, &mut payload).await {
                     Ok(bytes) => bytes,
-                    Err(e) => return Err(Error::from(e)),
+                    Err(e) => return Err(e),
                 };
 
                 process_violation_bytes(&body, max_size, &stats, &handler)?;

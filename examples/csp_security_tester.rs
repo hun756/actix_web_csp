@@ -500,7 +500,7 @@ impl CspSecurityTester {
                 description: if missing_directives.is_empty() {
                     "All important directives are defined".to_string()
                 } else {
-                    format!("Missing directives: {:?}", missing_directives)
+                    format!("Missing directives: {missing_directives:?}")
                 },
                 severity: if passed {
                     Severity::Info
@@ -628,15 +628,15 @@ impl CspSecurityTester {
 
         println!("\n📊 CSP Security Analysis Report");
         println!("{}", "=".repeat(50));
-        println!("Total Tests: {}", total_tests);
+        println!("Total Tests: {total_tests}");
         println!(
             "Passed: {} ({}%)",
             passed_tests,
             (passed_tests * 100) / total_tests
         );
         println!("Failed: {}", total_tests - passed_tests);
-        println!("Critical Issues: {}", critical_issues);
-        println!("High Priority Issues: {}", high_issues);
+        println!("Critical Issues: {critical_issues}");
+        println!("High Priority Issues: {high_issues}");
         println!();
 
         for result in &results {
@@ -655,7 +655,7 @@ impl CspSecurityTester {
             );
 
             if let Some(ref recommendation) = result.recommendation {
-                println!("   💡 Recommendation: {}", recommendation);
+                println!("   💡 Recommendation: {recommendation}");
             }
         }
 

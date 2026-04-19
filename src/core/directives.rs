@@ -40,10 +40,7 @@ impl Directive {
     }
 
     pub fn add_source(&mut self, source: Source) -> &mut Self {
-        if source.is_none() {
-            self.sources.clear();
-            self.sources.push(source);
-        } else if !self.sources.is_empty() && self.sources[0].is_none() {
+        if source.is_none() || (!self.sources.is_empty() && self.sources[0].is_none()) {
             self.sources.clear();
             self.sources.push(source);
         } else if !self.sources.iter().any(|s| s == &source) {
@@ -181,29 +178,25 @@ fn validate_source_semantics(directive_name: &str, source: &Source) -> Result<()
         Source::Host(host) => {
             if host.chars().any(char::is_whitespace) {
                 return Err(CspError::ValidationError(format!(
-                    "Directive '{}' contains host whitespace: {}",
-                    directive_name, host
+                    "Directive '{directive_name}' contains host whitespace: {host}"
                 )));
             }
 
             if host.contains("://") {
                 return Err(CspError::ValidationError(format!(
-                    "Directive '{}' host should not include a scheme: {}",
-                    directive_name, host
+                    "Directive '{directive_name}' host should not include a scheme: {host}"
                 )));
             }
 
             if host.starts_with('\'') || host.ends_with('\'') {
                 return Err(CspError::ValidationError(format!(
-                    "Directive '{}' host should use typed Source keywords instead of quoted values: {}",
-                    directive_name, host
+                    "Directive '{directive_name}' host should use typed Source keywords instead of quoted values: {host}"
                 )));
             }
 
             if host.contains(';') || host.contains(',') {
                 return Err(CspError::ValidationError(format!(
-                    "Directive '{}' host contains an invalid separator: {}",
-                    directive_name, host
+                    "Directive '{directive_name}' host contains an invalid separator: {host}"
                 )));
             }
         }
@@ -213,12 +206,12 @@ fn validate_source_semantics(directive_name: &str, source: &Source) -> Result<()
                 .next()
                 .map(|ch| ch.is_ascii_alphabetic())
                 .unwrap_or(false);
-            let rest_valid = chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '-' | '.'));
+            let rest_valid =
+                chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '-' | '.'));
 
             if !starts_correctly || !rest_valid || scheme.contains(':') {
                 return Err(CspError::ValidationError(format!(
-                    "Directive '{}' contains an invalid scheme: {}",
-                    directive_name, scheme
+                    "Directive '{directive_name}' contains an invalid scheme: {scheme}"
                 )));
             }
         }
@@ -228,8 +221,7 @@ fn validate_source_semantics(directive_name: &str, source: &Source) -> Result<()
                 || !is_base64ish(nonce)
             {
                 return Err(CspError::ValidationError(format!(
-                    "Directive '{}' contains an invalid nonce value",
-                    directive_name
+                    "Directive '{directive_name}' contains an invalid nonce value"
                 )));
             }
         }
@@ -239,8 +231,7 @@ fn validate_source_semantics(directive_name: &str, source: &Source) -> Result<()
                 || !is_base64ish(value)
             {
                 return Err(CspError::ValidationError(format!(
-                    "Directive '{}' contains an invalid hash value",
-                    directive_name
+                    "Directive '{directive_name}' contains an invalid hash value"
                 )));
             }
         }
@@ -269,7 +260,7 @@ impl fmt::Display for Directive {
                 if !first {
                     f.write_str(" ")?;
                 }
-                write!(f, "{}", source)?;
+                write!(f, "{source}")?;
                 first = false;
             }
         }
@@ -278,7 +269,7 @@ impl fmt::Display for Directive {
             if !fallback.is_empty() {
                 for source in fallback {
                     f.write_str(" ")?;
-                    write!(f, "{}", source)?;
+                    write!(f, "{source}")?;
                 }
             }
         }

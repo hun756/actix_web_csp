@@ -81,7 +81,7 @@ mod tests {
     fn test_csp_stats_display() {
         let stats = CspStats::new();
 
-        let display_str = format!("{}", stats);
+        let display_str = format!("{stats}");
 
         assert!(display_str.contains("CSP Middleware Statistics:"));
         assert!(display_str.contains("Uptime:"));
@@ -103,7 +103,7 @@ mod tests {
     fn test_csp_stats_debug_format() {
         let stats = CspStats::new();
 
-        let debug_str = format!("{:?}", stats);
+        let debug_str = format!("{stats:?}");
         assert!(debug_str.contains("CspStats"));
     }
 

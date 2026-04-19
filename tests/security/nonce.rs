@@ -80,7 +80,7 @@ mod tests {
 
         for i in 0..nonces.len() {
             for j in (i + 1)..nonces.len() {
-                assert_ne!(nonces[i], nonces[j], "Nonce {} and {} are the same", i, j);
+                assert_ne!(nonces[i], nonces[j], "Nonce {i} and {j} are the same");
             }
         }
     }

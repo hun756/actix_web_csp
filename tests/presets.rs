@@ -39,7 +39,10 @@ mod tests {
 
     #[test]
     fn test_preset_parser_accepts_aliases() {
-        assert_eq!("spa".parse::<CspPreset>().unwrap(), CspPreset::SinglePageApp);
+        assert_eq!(
+            "spa".parse::<CspPreset>().unwrap(),
+            CspPreset::SinglePageApp
+        );
         assert_eq!("api-only".parse::<CspPreset>().unwrap(), CspPreset::Api);
     }
 }
