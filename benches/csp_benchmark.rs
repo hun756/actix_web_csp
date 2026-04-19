@@ -264,6 +264,27 @@ fn benchmark_policy_verification(c: &mut Criterion) {
     group.finish();
 }
 
+fn benchmark_policy_interop(c: &mut Criterion) {
+    let mut group = c.benchmark_group("policy_interop");
+
+    let policy = CspPolicyBuilder::new()
+        .default_src([Source::Self_])
+        .script_src([Source::Self_, Source::Host(Cow::Borrowed("cdn.example.com"))])
+        .connect_src([Source::Self_, Source::Scheme(Cow::Borrowed("https"))])
+        .report_uri("/csp-report")
+        .build_unchecked();
+    let json = policy.to_json_string().unwrap();
+
+    group.bench_function("json_round_trip", |b| {
+        b.iter(|| {
+            let policy = black_box(actix_web_csp::CspPolicy::from_json_str(black_box(&json)).unwrap());
+            black_box(policy.to_json_string().unwrap())
+        })
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     benchmark_policy_creation,
@@ -271,7 +292,8 @@ criterion_group!(
     benchmark_nonce_generation,
     benchmark_hash_generation,
     benchmark_policy_caching,
-    benchmark_policy_verification
+    benchmark_policy_verification,
+    benchmark_policy_interop
 );
 
 criterion_main!(benches);

@@ -8,7 +8,10 @@ pub mod security;
 pub mod utils;
 
 // Re-export commonly used types for convenience
-pub use core::{CompiledCspPolicy, CspConfig, CspConfigBuilder, CspPolicy, CspPolicyBuilder, Source};
+pub use core::{
+    CompiledCspPolicy, CspConfig, CspConfigBuilder, CspPolicy, CspPolicyBuilder,
+    DirectiveDocument, PolicyDocument, Source,
+};
 pub use error::CspError;
 #[allow(deprecated)]
 pub use middleware::{

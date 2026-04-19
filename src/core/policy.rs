@@ -3,6 +3,7 @@ use crate::constants::{
     REPORT_TO, REPORT_URI, SCRIPT_SRC, SCRIPT_SRC_ELEM, SEMICOLON_SPACE, STYLE_SRC,
     STYLE_SRC_ELEM,
 };
+use crate::core::interop::PolicyDocument;
 use crate::core::directives::{Directive, DirectiveSpec, Sandbox};
 use crate::core::source::Source;
 use crate::error::CspError;
@@ -315,6 +316,31 @@ impl CspPolicy {
         }
 
         self
+    }
+
+    #[inline]
+    pub fn to_document(&self) -> PolicyDocument {
+        PolicyDocument::from(self)
+    }
+
+    pub fn from_document(document: PolicyDocument) -> Result<Self, CspError> {
+        Self::try_from(document)
+    }
+
+    pub fn to_json_string(&self) -> Result<String, CspError> {
+        serde_json::to_string(&self.to_document())
+            .map_err(|error| CspError::SerializationError(error.to_string()))
+    }
+
+    pub fn to_json_pretty(&self) -> Result<String, CspError> {
+        serde_json::to_string_pretty(&self.to_document())
+            .map_err(|error| CspError::SerializationError(error.to_string()))
+    }
+
+    pub fn from_json_str(value: &str) -> Result<Self, CspError> {
+        let document = serde_json::from_str::<PolicyDocument>(value)
+            .map_err(|error| CspError::SerializationError(error.to_string()))?;
+        Self::from_document(document)
     }
 
     fn calculate_hash(&self) -> NonZeroU64 {

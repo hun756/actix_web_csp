@@ -1,4 +1,7 @@
-pub use crate::core::{CspConfig, CspConfigBuilder, CspPolicy, CspPolicyBuilder, Source};
+pub use crate::core::{
+    CspConfig, CspConfigBuilder, CspPolicy, CspPolicyBuilder, DirectiveDocument, PolicyDocument,
+    Source,
+};
 #[allow(deprecated)]
 pub use crate::middleware::{
     configure_csp, csp_middleware, csp_middleware_with_nonce, csp_middleware_with_request_nonce,
