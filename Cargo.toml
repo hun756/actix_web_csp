@@ -2,6 +2,7 @@
 name = "actix-web-csp"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 authors = ["Mehmet Ekemen <ekemenms@gmail.com>"]
 description = "High-performance Content Security Policy middleware for Actix Web"
 license = "MIT"
@@ -11,7 +12,18 @@ homepage = "https://github.com/hun756/actix_web_csp"
 readme = "README.md"
 keywords = ["actix-web", "csp", "security", "middleware", "web"]
 categories = ["web-programming", "web-programming::http-server"]
-exclude = ["target/", "*.log", ".git/"]
+include = [
+    "src/**",
+    "examples/**",
+    "tests/**",
+    "benches/**",
+    ".github/workflows/**",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "deny.toml",
+]
 
 [lib]
 name = "actix_web_csp"
