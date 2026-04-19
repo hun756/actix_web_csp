@@ -1,4 +1,4 @@
-use actix_web_csp::core::{CspConfig, CspConfigBuilder, CspPolicy};
+use actix_web_csp::core::{CspConfig, CspConfigBuilder, CspPolicy, CspPolicyBuilder, Source};
 use actix_web_csp::security::NonceGenerator;
 use std::sync::Arc;
 use std::time::Duration;
@@ -127,5 +127,41 @@ mod tests {
         let policy_ref = policy_guard.read();
         assert!(policy_ref.get_directive("default-src").is_some());
         assert!(policy_ref.get_directive("object-src").is_some());
+    }
+
+    #[test]
+    fn test_csp_config_exposes_compiled_policy_snapshot() {
+        let policy = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .build_unchecked();
+        let config = CspConfig::new(policy);
+
+        let compiled = config.compiled_policy().unwrap();
+        assert!(
+            compiled
+                .header_value()
+                .to_str()
+                .unwrap()
+                .contains("default-src 'self'")
+        );
+    }
+
+    #[test]
+    fn test_csp_config_rebuilds_compiled_policy_after_update() {
+        let policy = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .build_unchecked();
+        let config = CspConfig::new(policy);
+
+        config.update_policy(|policy| {
+            let mut directive = actix_web_csp::core::Directive::new("script-src");
+            directive.add_source(Source::Self_);
+            policy.add_directive(directive);
+        });
+
+        let compiled = config.compiled_policy().unwrap();
+        let header = compiled.header_value().to_str().unwrap();
+        assert!(header.contains("default-src 'self'"));
+        assert!(header.contains("script-src 'self'"));
     }
 }

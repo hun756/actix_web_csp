@@ -203,6 +203,10 @@ fn benchmark_policy_caching(c: &mut Criterion) {
         })
     });
 
+    group.bench_function("compiled_snapshot", |b| {
+        b.iter(|| black_box(config.compiled_policy().unwrap()))
+    });
+
     group.finish();
 }
 

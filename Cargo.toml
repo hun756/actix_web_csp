@@ -38,6 +38,7 @@ indexmap = "2.0.0"
 dashmap = "5.4.0"
 lru = "0.11.0"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+arc-swap = "1.7.1"
 
 # Cryptography and security
 ring = "0.16.20"

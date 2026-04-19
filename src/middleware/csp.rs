@@ -104,16 +104,17 @@ where
 
             if let Some(nonce) = request_nonce.as_deref() {
                 let serialize_timer = PerformanceTimer::new();
-                let policy_guard = config.policy();
-                let policy = policy_guard.read();
-                let mut policy_with_nonce = policy.clone_with_runtime_nonce(nonce);
-                let header_name = policy_with_nonce.header_name();
-                drop(policy);
+                let compiled_policy = {
+                    let policy_guard = config.policy();
+                    let policy = policy_guard.read();
+                    policy.compile_with_runtime_nonce(nonce)
+                };
 
-                if let Ok(value) =
-                    policy_with_nonce.header_value_with_cache_duration(config.cache_duration())
-                {
-                    headers.insert(header_name, value);
+                if let Ok(compiled_policy) = compiled_policy {
+                    headers.insert(
+                        compiled_policy.header_name().clone(),
+                        compiled_policy.header_value().clone(),
+                    );
                 }
 
                 config
@@ -129,47 +130,55 @@ where
                     }
                 }
             } else {
-                let policy_guard = config.policy();
-                let policy = policy_guard.read();
-
-                let hash_timer = PerformanceTimer::new();
-                let mut policy_for_hash = policy.clone();
-                let policy_hash = policy_for_hash.hash();
-                config
-                    .stats()
-                    .add_policy_hash_time(hash_timer.elapsed().as_nanos() as usize);
-
-                if let Some(cached_policy) = config.get_cached_policy(policy_hash) {
+                if let Some(compiled_policy) = config.compiled_policy() {
                     config.stats().increment_cache_hit_count();
-                    drop(policy);
-
-                    let header_name = if cached_policy.is_report_only() {
-                        HeaderName::from_static(HEADER_CSP_REPORT_ONLY)
-                    } else {
-                        HeaderName::from_static(HEADER_CSP)
-                    };
-
-                    let mut policy_clone = cached_policy.as_ref().clone();
-                    if let Ok(value) =
-                        policy_clone.header_value_with_cache_duration(config.cache_duration())
-                    {
-                        headers.insert(header_name, value);
-                    }
+                    headers.insert(
+                        compiled_policy.header_name().clone(),
+                        compiled_policy.header_value().clone(),
+                    );
                 } else {
-                    let serialize_timer = PerformanceTimer::new();
-                    let header_name = policy.header_name();
-                    let mut policy_clone = policy.clone();
-                    drop(policy);
+                    let policy_guard = config.policy();
+                    let policy = policy_guard.read();
 
-                    let header_value =
-                        policy_clone.header_value_with_cache_duration(config.cache_duration());
+                    let hash_timer = PerformanceTimer::new();
+                    let mut policy_for_hash = policy.clone();
+                    let policy_hash = policy_for_hash.hash();
                     config
                         .stats()
-                        .add_policy_serialize_time(serialize_timer.elapsed().as_nanos() as usize);
+                        .add_policy_hash_time(hash_timer.elapsed().as_nanos() as usize);
 
-                    if let Ok(value) = header_value {
-                        headers.insert(header_name, value);
-                        config.cache_policy(policy_hash, policy_clone);
+                    if let Some(cached_policy) = config.get_cached_policy(policy_hash) {
+                        config.stats().increment_cache_hit_count();
+                        drop(policy);
+
+                        let header_name = if cached_policy.is_report_only() {
+                            HeaderName::from_static(HEADER_CSP_REPORT_ONLY)
+                        } else {
+                            HeaderName::from_static(HEADER_CSP)
+                        };
+
+                        let mut policy_clone = cached_policy.as_ref().clone();
+                        if let Ok(value) =
+                            policy_clone.header_value_with_cache_duration(config.cache_duration())
+                        {
+                            headers.insert(header_name, value);
+                        }
+                    } else {
+                        let serialize_timer = PerformanceTimer::new();
+                        let header_name = policy.header_name();
+                        let mut policy_clone = policy.clone();
+                        drop(policy);
+
+                        let header_value =
+                            policy_clone.header_value_with_cache_duration(config.cache_duration());
+                        config.stats().add_policy_serialize_time(
+                            serialize_timer.elapsed().as_nanos() as usize,
+                        );
+
+                        if let Ok(value) = header_value {
+                            headers.insert(header_name, value);
+                            config.cache_policy(policy_hash, policy_clone);
+                        }
                     }
                 }
             }

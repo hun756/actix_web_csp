@@ -136,10 +136,11 @@ use crate::constants::{
     DEFAULT_POLICY_CACHE_ENTRIES, DEFAULT_REQUEST_NONCE_CACHE_ENTRIES,
 };
 use crate::core::directives::DirectiveSpec;
-use crate::core::policy::CspPolicy;
+use crate::core::policy::{CompiledCspPolicy, CspPolicy};
 use crate::monitoring::perf::PerformanceMetrics;
 use crate::monitoring::stats::CspStats;
 use crate::security::nonce::NonceGenerator;
+use arc_swap::ArcSwapOption;
 use lru::LruCache;
 use parking_lot::{Mutex, RwLock};
 use std::num::{NonZeroU64, NonZeroUsize};
@@ -210,6 +211,8 @@ pub struct CspConfig {
     next_listener_id: Arc<AtomicUsize>,
     /// LRU cache for compiled policies
     policy_cache: Arc<RwLock<LruCache<NonZeroU64, Arc<CspPolicy>>>>,
+    /// Lock-free compiled snapshot for the active policy
+    compiled_policy: Arc<ArcSwapOption<CompiledCspPolicy>>,
 }
 
 impl CspConfig {
@@ -234,6 +237,8 @@ impl CspConfig {
     /// let config = CspConfig::new(policy);
     /// ```
     pub fn new(policy: CspPolicy) -> Self {
+        let compiled_policy = policy.compile().ok().map(Arc::new);
+
         Self {
             policy: Arc::new(RwLock::new(policy)),
             nonce_generator: None,
@@ -250,6 +255,7 @@ impl CspConfig {
             policy_cache: Arc::new(RwLock::new(LruCache::new(
                 NonZeroUsize::new(DEFAULT_POLICY_CACHE_ENTRIES).unwrap(),
             ))),
+            compiled_policy: Arc::new(ArcSwapOption::from(compiled_policy)),
         }
     }
 
@@ -292,7 +298,7 @@ impl CspConfig {
             }
         }
 
-        self.policy_cache.write().clear();
+        self.refresh_compiled_policy();
         self.stats.increment_policy_update_count();
     }
 
@@ -545,6 +551,11 @@ impl CspConfig {
     }
 
     #[inline]
+    pub fn compiled_policy(&self) -> Option<Arc<CompiledCspPolicy>> {
+        self.compiled_policy.load_full()
+    }
+
+    #[inline]
     pub(crate) fn prepare_request_nonce(&self, request_id: &str) -> Option<String> {
         if self
             .nonce_per_request
@@ -564,6 +575,10 @@ impl CspConfig {
         {
             self.per_request_nonces.lock().pop(request_id);
         }
+    }
+
+    pub fn rebuild_compiled_policy(&self) {
+        self.refresh_compiled_policy();
     }
 
     /// Adds default security directives if they are not already present.
@@ -603,7 +618,18 @@ impl CspConfig {
                 policy.add_directive(directive);
             }
         }
+        self.refresh_compiled_policy();
         self
+    }
+
+    fn refresh_compiled_policy(&self) {
+        let compiled_policy = {
+            let policy = self.policy.read();
+            policy.compile().ok().map(Arc::new)
+        };
+
+        self.compiled_policy.store(compiled_policy);
+        self.policy_cache.write().clear();
     }
 }
 
