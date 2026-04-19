@@ -1,3 +1,5 @@
+//! Common imports for applications that prefer a compact `prelude::*` style.
+
 pub use crate::core::{
     CspConfig, CspConfigBuilder, CspPolicy, CspPolicyBuilder, DirectiveDocument, PolicyDocument,
     Source,

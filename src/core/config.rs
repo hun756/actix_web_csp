@@ -187,7 +187,7 @@ type UpdateFn = Box<dyn Fn(&mut CspPolicy) + Send + Sync + 'static>;
 /// ```
 #[derive(Clone)]
 pub struct CspConfig {
-    /// The CSP policy wrapped in Arc<RwLock> for thread-safe access
+    /// The CSP policy wrapped in `Arc<RwLock>` for thread-safe access
     policy: Arc<RwLock<CspPolicy>>,
     /// Optional nonce generator for inline content security
     nonce_generator: Option<Arc<NonceGenerator>>,

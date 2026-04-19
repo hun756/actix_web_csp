@@ -263,10 +263,16 @@ Besides middleware, the crate also exposes a few utilities that are handy in tes
 
 ## Examples In This Repo
 
-There are two good entry points if you want a fuller example than the snippets above:
+The repo now includes a few smaller walkthroughs as well as the fuller demos:
 
+- `cargo run --example walkthrough_basic_policy`
+- `cargo run --example walkthrough_nonce_flow`
+- `cargo run --example walkthrough_presets_and_json`
 - `cargo run --example real_world_test_fixed`
 - `cargo run --example csp_security_tester`
+
+The crate-level docs on docs.rs mirror this structure so the first page gives you
+the quick start, feature overview, and links to the walkthrough examples.
 
 ## Feature Flags
 
@@ -305,6 +311,21 @@ Run benchmarks:
 ```bash
 cargo bench
 ```
+
+Save and compare a baseline with Criterion:
+
+```bash
+cargo bench --bench csp_benchmark -- --save-baseline main
+cargo bench --bench csp_benchmark -- --baseline main
+```
+
+Run the benchmark suite in profiler-friendly mode:
+
+```bash
+cargo bench --bench csp_benchmark -- --profile-time 5
+```
+
+For a fuller benchmark and profiling workflow, see [BENCHMARKS.md](BENCHMARKS.md).
 
 ## Contributing
 
