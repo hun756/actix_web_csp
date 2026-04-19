@@ -106,4 +106,27 @@ mod tests {
         let host_source = Source::Host(Cow::Borrowed("example.com"));
         assert_eq!(host_source.as_static_str(), None);
     }
+
+    #[test]
+    fn test_source_from_str_parses_keywords_and_nonce() {
+        assert_eq!("'self'".parse::<Source>().unwrap(), Source::Self_);
+        assert_eq!("https:".parse::<Source>().unwrap(), Source::Scheme("https".into()));
+        assert_eq!(
+            "'nonce-abc123'".parse::<Source>().unwrap(),
+            Source::Nonce("abc123".into())
+        );
+    }
+
+    #[test]
+    fn test_source_from_str_parses_hash_source() {
+        let parsed = "'sha256-abc123='".parse::<Source>().unwrap();
+
+        assert_eq!(
+            parsed,
+            Source::Hash {
+                algorithm: HashAlgorithm::Sha256,
+                value: "abc123=".into(),
+            }
+        );
+    }
 }

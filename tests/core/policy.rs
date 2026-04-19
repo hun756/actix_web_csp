@@ -252,6 +252,39 @@ mod tests {
         assert!(header_str.contains("script-src 'self' 'unsafe-inline'"));
     }
 
+    #[test]
+    fn test_csp_policy_compile_creates_snapshot() {
+        let policy = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .report_uri("/csp-report")
+            .build_unchecked();
+
+        let compiled = policy.compile().unwrap();
+        assert_eq!(
+            compiled.header_name(),
+            &HeaderName::from_static("content-security-policy")
+        );
+        assert!(compiled.header_value().to_str().unwrap().contains("report-uri /csp-report"));
+    }
+
+    #[test]
+    fn test_csp_policy_round_trips_through_string_parser() {
+        let policy = CspPolicyBuilder::new()
+            .default_src([Source::Self_])
+            .script_src([Source::Self_, Source::Host("cdn.example.com".into())])
+            .report_uri("/csp-report")
+            .report_to("csp-endpoint")
+            .build_unchecked();
+
+        let serialized = policy.to_string();
+        let reparsed = serialized.parse::<CspPolicy>().unwrap();
+
+        assert_eq!(reparsed.to_string(), serialized);
+        assert!(reparsed.get_directive("script-src").is_some());
+        assert_eq!(reparsed.report_uri(), Some("/csp-report"));
+        assert_eq!(reparsed.report_to(), Some("csp-endpoint"));
+    }
+
     #[cfg(feature = "extended-validation")]
     #[test]
     fn test_extended_validation_rejects_host_with_scheme() {

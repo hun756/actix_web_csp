@@ -14,7 +14,9 @@ use rustc_hash::FxHasher;
 use std::num::NonZeroU64;
 use std::{
     borrow::Cow,
+    fmt,
     hash::{Hash, Hasher},
+    str::FromStr,
     time::Duration,
 };
 
@@ -33,6 +35,36 @@ pub struct CspPolicy {
     policy_hash: Option<NonZeroU64>,
 }
 
+#[derive(Debug, Clone)]
+pub struct CompiledCspPolicy {
+    header_name: HeaderName,
+    header_value: HeaderValue,
+    policy_hash: NonZeroU64,
+    report_only: bool,
+}
+
+impl CompiledCspPolicy {
+    #[inline]
+    pub fn header_name(&self) -> &HeaderName {
+        &self.header_name
+    }
+
+    #[inline]
+    pub fn header_value(&self) -> &HeaderValue {
+        &self.header_value
+    }
+
+    #[inline]
+    pub fn policy_hash(&self) -> NonZeroU64 {
+        self.policy_hash
+    }
+
+    #[inline]
+    pub fn is_report_only(&self) -> bool {
+        self.report_only
+    }
+}
+
 impl CspPolicy {
     #[inline]
     pub fn new() -> Self {
@@ -42,8 +74,13 @@ impl CspPolicy {
     pub fn add_directive(&mut self, directive: Directive) -> &mut Self {
         let size_delta = directive.estimated_size();
         let name = directive.name().to_owned();
+        let previous_size = self
+            .directives
+            .get(name.as_str())
+            .map(Directive::estimated_size)
+            .unwrap_or(0);
         self.directives.insert(Cow::Owned(name), directive);
-        self.estimated_size += size_delta;
+        self.estimated_size = self.estimated_size + size_delta - previous_size;
         self.cached_header_value = None;
         self.policy_hash = None;
         self
@@ -170,6 +207,24 @@ impl CspPolicy {
         result
     }
 
+    pub fn compile(&self) -> Result<CompiledCspPolicy, CspError> {
+        Ok(CompiledCspPolicy {
+            header_name: self.header_name(),
+            header_value: self.generate_header_value()?,
+            policy_hash: self.calculate_hash(),
+            report_only: self.report_only,
+        })
+    }
+
+    pub fn compile_with_runtime_nonce(
+        &self,
+        nonce: impl AsRef<str>,
+    ) -> Result<CompiledCspPolicy, CspError> {
+        let mut policy = self.clone();
+        policy.inject_runtime_nonce(nonce);
+        policy.compile()
+    }
+
     pub fn validate(&self) -> Result<(), CspError> {
         for directive in self.directives.values() {
             directive.validate()?;
@@ -220,31 +275,7 @@ impl CspPolicy {
             return hash;
         }
 
-        let mut hasher = FxHasher::default();
-
-        let directive_count = self.directives.len();
-        directive_count.hash(&mut hasher);
-
-        for (name, directive) in &self.directives {
-            let name_bytes = name.as_bytes();
-            hasher.write(name_bytes);
-
-            directive.hash(&mut hasher);
-        }
-
-        self.report_only.hash(&mut hasher);
-
-        if let Some(ref uri) = self.report_uri {
-            hasher.write(uri.as_bytes());
-        }
-
-        if let Some(ref endpoint) = self.report_to {
-            hasher.write(endpoint.as_bytes());
-        }
-
-        let hash_value = hasher.finish();
-        let hash = NonZeroU64::new(hash_value).unwrap_or_else(|| NonZeroU64::new(1).unwrap());
-
+        let hash = self.calculate_hash();
         self.policy_hash = Some(hash);
         hash
     }
@@ -284,6 +315,30 @@ impl CspPolicy {
         }
 
         self
+    }
+
+    fn calculate_hash(&self) -> NonZeroU64 {
+        let mut hasher = FxHasher::default();
+
+        self.directives.len().hash(&mut hasher);
+
+        for (name, directive) in &self.directives {
+            hasher.write(name.as_bytes());
+            directive.hash(&mut hasher);
+        }
+
+        self.report_only.hash(&mut hasher);
+
+        if let Some(ref uri) = self.report_uri {
+            hasher.write(uri.as_bytes());
+        }
+
+        if let Some(ref endpoint) = self.report_to {
+            hasher.write(endpoint.as_bytes());
+        }
+
+        let hash_value = hasher.finish();
+        NonZeroU64::new(hash_value).unwrap_or_else(|| NonZeroU64::new(1).unwrap())
     }
 }
 
@@ -338,6 +393,88 @@ impl Hash for CspPolicy {
         self.report_only.hash(state);
         self.report_uri.hash(state);
         self.report_to.hash(state);
+    }
+}
+
+impl fmt::Display for CspPolicy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut first = true;
+
+        for directive in self.directives.values() {
+            if !first {
+                f.write_str("; ")?;
+            }
+            write!(f, "{}", directive)?;
+            first = false;
+        }
+
+        if let Some(report_uri) = &self.report_uri {
+            if !first {
+                f.write_str("; ")?;
+            }
+            write!(f, "{} {}", REPORT_URI, report_uri)?;
+            first = false;
+        }
+
+        if let Some(report_to) = &self.report_to {
+            if !first {
+                f.write_str("; ")?;
+            }
+            write!(f, "{} {}", REPORT_TO, report_to)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl FromStr for CspPolicy {
+    type Err = CspError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let mut policy = CspPolicy::new();
+
+        for segment in value.split(';') {
+            let segment = segment.trim();
+            if segment.is_empty() {
+                continue;
+            }
+
+            if let Some(report_uri) = segment.strip_prefix(REPORT_URI) {
+                let report_uri = report_uri.trim();
+                if report_uri.is_empty() || report_uri.contains(char::is_whitespace) {
+                    return Err(CspError::InvalidReportUri(
+                        "report-uri must contain exactly one value".to_string(),
+                    ));
+                }
+                policy.set_report_uri(report_uri.to_owned());
+                continue;
+            }
+
+            if let Some(report_to) = segment.strip_prefix(REPORT_TO) {
+                let report_to = report_to.trim();
+                if report_to.is_empty() || report_to.contains(char::is_whitespace) {
+                    return Err(CspError::ValidationError(
+                        "report-to must contain exactly one endpoint token".to_string(),
+                    ));
+                }
+                policy.set_report_to(report_to.to_owned());
+                continue;
+            }
+
+            policy.add_directive(Directive::from_str(segment)?);
+        }
+
+        policy.validate()?;
+        Ok(policy)
+    }
+}
+
+impl TryFrom<&str> for CspPolicy {
+    type Error = CspError;
+
+    #[inline]
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 

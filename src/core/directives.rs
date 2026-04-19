@@ -9,6 +9,7 @@ use std::{
     borrow::Cow,
     fmt,
     hash::{Hash, Hasher},
+    str::FromStr,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -323,6 +324,41 @@ impl Hash for Directive {
         self.name.hash(state);
         self.sources.hash(state);
         self.fallback_sources.hash(state);
+    }
+}
+
+impl FromStr for Directive {
+    type Err = CspError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let value = value.trim();
+        if value.is_empty() {
+            return Err(CspError::InvalidDirectiveName(
+                "Directive string cannot be empty".to_string(),
+            ));
+        }
+
+        let mut parts = value.split_whitespace();
+        let name = parts.next().ok_or_else(|| {
+            CspError::InvalidDirectiveName("Directive name cannot be empty".to_string())
+        })?;
+
+        let mut directive = Directive::new(name.to_owned());
+        for source in parts {
+            directive.add_source(Source::from_str(source)?);
+        }
+
+        directive.validate()?;
+        Ok(directive)
+    }
+}
+
+impl TryFrom<&str> for Directive {
+    type Error = CspError;
+
+    #[inline]
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 

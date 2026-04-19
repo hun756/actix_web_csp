@@ -10,6 +10,7 @@ use std::{
     borrow::Cow,
     fmt,
     hash::{Hash, Hasher},
+    str::FromStr,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -211,4 +212,83 @@ impl BufferWriter for Source {
             }
         }
     }
+}
+
+impl FromStr for Source {
+    type Err = crate::error::CspError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let value = value.trim();
+
+        if value.is_empty() {
+            return Err(crate::error::CspError::InvalidDirectiveValue(
+                "Source value cannot be empty".to_string(),
+            ));
+        }
+
+        let source = match value {
+            NONE_SOURCE => Source::None,
+            SELF_SOURCE => Source::Self_,
+            UNSAFE_INLINE_SOURCE => Source::UnsafeInline,
+            UNSAFE_EVAL_SOURCE => Source::UnsafeEval,
+            STRICT_DYNAMIC_SOURCE => Source::StrictDynamic,
+            REPORT_SAMPLE_SOURCE => Source::ReportSample,
+            WASM_UNSAFE_EVAL_SOURCE => Source::WasmUnsafeEval,
+            UNSAFE_HASHES_SOURCE => Source::UnsafeHashes,
+            _ => {
+                if let Some(nonce) = value
+                    .strip_prefix(NONCE_PREFIX)
+                    .and_then(|value| value.strip_suffix(SUFFIX_QUOTE))
+                {
+                    Source::Nonce(Cow::Owned(nonce.to_owned()))
+                } else if let Some((algorithm, hash_value)) = parse_hash_source(value)? {
+                    Source::Hash {
+                        algorithm,
+                        value: Cow::Owned(hash_value),
+                    }
+                } else if let Some(scheme) = value.strip_suffix(':') {
+                    Source::Scheme(Cow::Owned(scheme.to_owned()))
+                } else {
+                    Source::Host(Cow::Owned(value.to_owned()))
+                }
+            }
+        };
+
+        Ok(source)
+    }
+}
+
+impl TryFrom<&str> for Source {
+    type Error = crate::error::CspError;
+
+    #[inline]
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
+    }
+}
+
+fn parse_hash_source(
+    value: &str,
+) -> Result<Option<(HashAlgorithm, String)>, crate::error::CspError> {
+    for algorithm in [
+        HashAlgorithm::Sha256,
+        HashAlgorithm::Sha384,
+        HashAlgorithm::Sha512,
+    ] {
+        if let Some(hash_value) = value
+            .strip_prefix(algorithm.prefix())
+            .and_then(|value| value.strip_suffix(SUFFIX_QUOTE))
+        {
+            return Ok(Some((algorithm, hash_value.to_owned())));
+        }
+    }
+
+    if value.starts_with("'sha") && value.ends_with(SUFFIX_QUOTE) {
+        return Err(crate::error::CspError::InvalidDirectiveValue(format!(
+            "Unsupported hash source: {}",
+            value
+        )));
+    }
+
+    Ok(None)
 }
