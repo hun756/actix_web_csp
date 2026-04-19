@@ -7,6 +7,18 @@ on:
     branches: [main, master]
 
 jobs:
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.85.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Verify MSRV build
+        run: cargo test --all-features
+
   test:
     name: Test (${{ matrix.task }})
     runs-on: ubuntu-latest
@@ -54,6 +66,17 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Build docs
         run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+
+  supply-chain:
+    name: Supply Chain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+          arguments: --all-features
 
   examples:
     name: Examples

@@ -15,6 +15,12 @@ It includes:
 
 If you want startup-time validation, prefer `build()`. The examples below mostly use `build_unchecked()` to keep the snippets short.
 
+## Support Policy
+
+- Current MSRV: Rust `1.85`
+- Primary CI coverage: default features, all features, no default features, and `extended-validation`
+- Security and dependency hygiene checks run in CI as part of the release workflow
+
 ## Installation
 
 Add the crate to your `Cargo.toml`:
@@ -262,12 +268,36 @@ There are two good entry points if you want a fuller example than the snippets a
 - `cargo run --example real_world_test_fixed`
 - `cargo run --example csp_security_tester`
 
+## Feature Flags
+
+- `stats`: enables runtime statistics collection
+- `reporting`: enables violation report parsing and reporting middleware helpers
+- `verify`: enables `PolicyVerifier`
+- `extended-validation`: enables stricter semantic validation for sources and reporting directives
+
+Default features: `stats`, `reporting`, `verify`
+
 ## Development
 
 Run the test suite:
 
 ```bash
 cargo test
+```
+
+Run the stricter validation matrix:
+
+```bash
+cargo test --all-features
+cargo test --features extended-validation
+cargo check --no-default-features
+```
+
+Run the release-quality checks:
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 Run benchmarks:
@@ -279,6 +309,8 @@ cargo bench
 ## Contributing
 
 Issues and pull requests are welcome. If you plan to make a larger change, opening an issue first is helpful.
+
+For dependency policy and vulnerability handling, see [SECURITY.md](SECURITY.md).
 
 ## License
 
