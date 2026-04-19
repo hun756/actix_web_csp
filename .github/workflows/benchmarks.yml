@@ -1,0 +1,35 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "benches/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+
+jobs:
+  criterion:
+    name: Criterion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run benchmarks
+        run: cargo bench --bench csp_benchmark
+      - name: Summarize benchmark artifacts
+        run: |
+          echo "### Criterion benchmark report" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact: criterion-report" >> "$GITHUB_STEP_SUMMARY"
+          echo "- HTML entry point: target/criterion/report/index.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Local command: cargo bench --bench csp_benchmark" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Baseline command: cargo bench --bench csp_benchmark -- --save-baseline main" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload criterion report
+        uses: actions/upload-artifact@v4
+        with:
+          name: criterion-report
+          path: target/criterion
+          if-no-files-found: error

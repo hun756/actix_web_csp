@@ -19,6 +19,7 @@ include = [
     "benches/**",
     ".github/workflows/**",
     "README.md",
+    "BENCHMARKS.md",
     "LICENSE",
     "CONTRIBUTING.md",
     "SECURITY.md",

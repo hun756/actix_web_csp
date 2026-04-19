@@ -85,5 +85,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Compile all examples
+        run: cargo check --examples --all-features
+      - name: Smoke test walkthrough examples
+        run: |
+          cargo run --example walkthrough_basic_policy
+          cargo run --example walkthrough_nonce_flow
+          cargo run --example walkthrough_presets_and_json
       - name: Run security tester example
         run: cargo run --example csp_security_tester
