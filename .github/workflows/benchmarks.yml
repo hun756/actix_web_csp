@@ -28,7 +28,7 @@ jobs:
           echo "- Local command: cargo bench --bench csp_benchmark" >> "$GITHUB_STEP_SUMMARY"
           echo "- Baseline command: cargo bench --bench csp_benchmark -- --save-baseline main" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload criterion report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: criterion-report
           path: target/criterion
