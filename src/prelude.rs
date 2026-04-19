@@ -8,4 +8,5 @@ pub use crate::middleware::{
     CspExtensions, CspMiddleware,
 };
 pub use crate::monitoring::{CspStats, CspViolationReport};
+pub use crate::presets::{preset_policy, CspPreset};
 pub use crate::security::{HashAlgorithm, HashGenerator, NonceGenerator, PolicyVerifier};

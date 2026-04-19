@@ -1,6 +1,6 @@
 use actix_web_csp::{
     core::CspConfig, security::HashAlgorithm, security::HashGenerator, security::NonceGenerator,
-    security::PolicyVerifier, CspPolicyBuilder, Source,
+    security::PolicyVerifier, CspPolicyBuilder, CspPreset, Source,
 };
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::borrow::Cow;
@@ -280,6 +280,10 @@ fn benchmark_policy_interop(c: &mut Criterion) {
             let policy = black_box(actix_web_csp::CspPolicy::from_json_str(black_box(&json)).unwrap());
             black_box(policy.to_json_string().unwrap())
         })
+    });
+
+    group.bench_function("preset_build", |b| {
+        b.iter(|| black_box(CspPreset::Dashboard.build()))
     });
 
     group.finish();

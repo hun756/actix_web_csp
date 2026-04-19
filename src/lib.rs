@@ -3,6 +3,7 @@ pub mod core;
 pub mod error;
 pub mod middleware;
 pub mod monitoring;
+pub mod presets;
 pub mod prelude;
 pub mod security;
 pub mod utils;
@@ -19,4 +20,5 @@ pub use middleware::{
     csp_middleware_with_request_nonce, csp_with_reporting, CspExtensions, CspMiddleware, CspReportingMiddleware,
 };
 pub use monitoring::{CspStats, CspViolationReport, PerformanceMetrics, PerformanceTimer, AdaptiveCache};
+pub use presets::{preset_policy, CspPreset};
 pub use security::{HashAlgorithm, HashGenerator, NonceGenerator, PolicyVerifier, RequestNonce};
