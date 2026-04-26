@@ -41,7 +41,7 @@ actix-http = "3.3.1"
 actix-service = "2.0.2"
 
 # Asynchronous utilities
-futures = "0.3.28"
+futures = "0.3.32"
 
 # Memory and performance optimization
 bytes = "1.4.0"
