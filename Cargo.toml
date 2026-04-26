@@ -59,7 +59,7 @@ getrandom = "0.2.10"
 base64 = "0.21.2"
 
 # Error handling
-thiserror = "1.0.40"
+thiserror = "2.0.18"
 
 # Serialization/Deserialization
 serde = { version = "1.0.163", features = ["derive"] }
