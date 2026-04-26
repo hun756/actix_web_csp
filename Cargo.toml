@@ -54,7 +54,7 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 arc-swap = "1.7.1"
 
 # Cryptography and security
-ring = "0.16.20"
+ring = "0.17.14"
 getrandom = "0.2.10"
 base64 = "0.21.2"
 
